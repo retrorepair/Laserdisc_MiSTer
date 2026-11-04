@@ -1,0 +1,230 @@
+{
+ "format": "M50552 glyph transcription: 12 wide x 14 rows within a 12x18 cell; '#' = lit dot",
+ "cell": [
+  12,
+  18
+ ],
+ "glyph_rows": 14,
+ "glyphs": {
+  "L": {
+   "bits": [
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##########..",
+    "##########.."
+   ],
+   "source": "ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (direct capture, SHA-256 d07acbdd...), frames 2.5-4.0 s averaged, tools/osd/glyph_sample.py",
+   "instances": 2,
+   "instances_agree": true,
+   "player": "unknown NTSC Pioneer-family player (same font style as CLD-1750 footage)"
+  },
+  "A": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##########..",
+    "##########..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##.."
+   ],
+   "source": "ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (direct capture, SHA-256 d07acbdd...), frames 2.5-4.0 s averaged, tools/osd/glyph_sample.py",
+   "instances": 2,
+   "instances_agree": true,
+   "player": "unknown NTSC Pioneer-family player (same font style as CLD-1750 footage)"
+  },
+  "S": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##..........",
+    "###.........",
+    ".#######....",
+    "..#######...",
+    ".......###..",
+    "........##..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "source": "ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (direct capture, SHA-256 d07acbdd...), frames 2.5-4.0 s averaged, tools/osd/glyph_sample.py",
+   "instances": 2,
+   "instances_agree": true,
+   "player": "unknown NTSC Pioneer-family player (same font style as CLD-1750 footage)"
+  },
+  "E": {
+   "bits": [
+    "##########..",
+    "##########..",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "########....",
+    "########....",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##########..",
+    "##########.."
+   ],
+   "source": "ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (direct capture, SHA-256 d07acbdd...), frames 2.5-4.0 s averaged, tools/osd/glyph_sample.py",
+   "instances": 1,
+   "instances_agree": true,
+   "player": "unknown NTSC Pioneer-family player (same font style as CLD-1750 footage)"
+  },
+  "R": {
+   "bits": [
+    "########....",
+    "#########...",
+    "##.....###..",
+    "##......##..",
+    "##......##..",
+    "##.....###..",
+    "#########...",
+    "########....",
+    "##..##......",
+    "##..###.....",
+    "##...###....",
+    "##....###...",
+    "##.....###..",
+    "##......##.."
+   ],
+   "source": "ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (direct capture, SHA-256 d07acbdd...), frames 2.5-4.0 s averaged, tools/osd/glyph_sample.py",
+   "instances": 1,
+   "instances_agree": true,
+   "player": "unknown NTSC Pioneer-family player (same font style as CLD-1750 footage)"
+  },
+  "D": {
+   "bits": [
+    "########....",
+    "#########...",
+    "..##...###..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##...###..",
+    "#########...",
+    "########...."
+   ],
+   "source": "ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (direct capture, SHA-256 d07acbdd...), frames 2.5-4.0 s averaged, tools/osd/glyph_sample.py",
+   "instances": 1,
+   "instances_agree": true,
+   "player": "unknown NTSC Pioneer-family player (same font style as CLD-1750 footage)"
+  },
+  "I": {
+   "bits": [
+    "..######....",
+    "..######....",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "..######....",
+    "..######...."
+   ],
+   "source": "ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (direct capture, SHA-256 d07acbdd...), frames 2.5-4.0 s averaged, tools/osd/glyph_sample.py",
+   "instances": 1,
+   "instances_agree": true,
+   "player": "unknown NTSC Pioneer-family player (same font style as CLD-1750 footage)"
+  },
+  "C": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "source": "ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (direct capture, SHA-256 d07acbdd...), frames 2.5-4.0 s averaged, tools/osd/glyph_sample.py",
+   "instances": 1,
+   "instances_agree": true,
+   "player": "unknown NTSC Pioneer-family player (same font style as CLD-1750 footage)"
+  },
+  "P": {
+   "bits": [
+    "########....",
+    "#########...",
+    "##.....###..",
+    "##......##..",
+    "##......##..",
+    "##.....###..",
+    "#########...",
+    "########....",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##.........."
+   ],
+   "source": "ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (direct capture, SHA-256 d07acbdd...), frames 2.5-4.0 s averaged, tools/osd/glyph_sample.py",
+   "instances": 1,
+   "instances_agree": true,
+   "player": "unknown NTSC Pioneer-family player (same font style as CLD-1750 footage)"
+  },
+  "Y": {
+   "bits": [
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "###....###..",
+    ".###..###...",
+    "..######....",
+    "...####.....",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......"
+   ],
+   "source": "ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (direct capture, SHA-256 d07acbdd...), frames 2.5-4.0 s averaged, tools/osd/glyph_sample.py",
+   "instances": 1,
+   "instances_agree": true,
+   "player": "unknown NTSC Pioneer-family player (same font style as CLD-1750 footage)"
+  }
+ }
+}

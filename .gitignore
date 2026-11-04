@@ -1,0 +1,83 @@
+# ---- Media and decodes (tens of GB; provenance and hashes are in ref/PROVENANCE.md)
+/BBC-Domesday-AIV-LaserDisc-DD86-Disc-Set-11/
+/decoded/
+/deploy/
+*.ldf
+*.tbc
+*.tbc.json
+*.tbc.db
+*.pcm
+*.efm
+
+# ---- Firmware and copyrighted reference material (keep locally; listed with hashes in ref/PROVENANCE.md)
+/Pioneer_4400-4300_ROMs/
+/Pioneer_4400-4300_ROMs.zip
+/ref/rom/
+*.BIN
+*.HEX
+/ref/**/*.pdf
+/ref/cld1750/footage/
+/ref/mitsubishi/*_text.txt
+
+# ---- Third-party repos (re-clone at the commits in ref/PROVENANCE.md)
+/ref/repos/
+
+# ---- Python environments and caches
+/tools/venv-lddecode/
+__pycache__/
+*.pyc
+
+# ---- Generated analysis (regenerable from the tools)
+/analysis/footage_*/
+/analysis/*.png
+!/analysis/hw/
+/analysis/DYW*.asm
+
+# ---- Quartus build outputs
+/core/db/
+/core/incremental_db/
+/core/output_files/
+/core/build.log
+/core/build_id.v
+/core/c5_pin_model_dump.txt
+/core/sta_paths.txt
+/core/*.qws
+/core/*.rpt
+/core/PLLJ_PLLSPE_INFO.txt
+/core/greybox_tmp/
+/core/.qsys_edit/
+
+# ---- Simulation outputs
+/core/sim/work/
+/core/sim/transcript
+/core/sim/field.hex
+/core/sim/field_index.txt
+/core/sim/rgb_rtl.txt
+/core/sim/*.wlf
+
+# ---- generated core ROM images (built by tools/osd/gen_osd_rom.py; needed by the build)
+!/core/rtl/*.hex
+/core/sim/osd_rtl.txt
+/Teenage-Mutant-Ninja-Turtles-1987-Laserdisc-FM-RF/
+/analysis/*.json
+/analysis/hw/m4/*.png
+/ref/tools/
+/analysis/orc/*.rgb
+/analysis/orc/*.png
+# ---- DSCV streams and encoder build output
+*.dscv
+/analysis/dscv/*.ppm
+/tools/convert/dscv/*.exe
+/analysis/dscv/*.png
+/analysis/hw/m3/*.png
+/analysis/hw/m3/*.jpg
+/core/sim/dscv/
+/core/sim/work_ls/
+/analysis/audio/
+
+# ---- Main_MiSTer fork (its own git repo, GPL-3; see main/README)
+/main/
+/ref/sidechange/footage/
+
+# ---- Public export (tools/release/export_public.sh); its own git repository
+/public/

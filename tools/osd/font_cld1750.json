@@ -1,0 +1,623 @@
+{
+ "format": "M50552-family glyphs, 12 dots wide x 14 rows (cell 12x18); \"#\" = lit dot",
+ "status_key": {
+  "confirmed": "identical in two independent players' output",
+  "direct": "single direct video capture (highest-fidelity source)",
+  "photo": "single photo of an LCD, clean vote (few uncertain dots), checked by eye",
+  "review": "photo instances disagree: not yet reliable; do not use"
+ },
+ "note": "No source is a CLD-1750 direct capture; agreement across players supports a shared Mitsubishi font. Mask -132SP identity per glyph is unproven.",
+ "glyphs": {
+  "L": {
+   "bits": [
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##########..",
+    "##########.."
+   ],
+   "status": "confirmed",
+   "sources": [
+    "direct capture: ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (unknown NTSC player)",
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ]
+  },
+  "A": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##########..",
+    "##########..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##.."
+   ],
+   "status": "confirmed",
+   "sources": [
+    "direct capture: ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (unknown NTSC player)",
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ]
+  },
+  "S": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##..........",
+    "###.........",
+    ".#######....",
+    "..#######...",
+    ".......###..",
+    "........##..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "status": "confirmed",
+   "sources": [
+    "direct capture: ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (unknown NTSC player)",
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ]
+  },
+  "E": {
+   "bits": [
+    "##########..",
+    "##########..",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "########....",
+    "########....",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##########..",
+    "##########.."
+   ],
+   "status": "confirmed",
+   "sources": [
+    "direct capture: ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (unknown NTSC player)",
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ]
+  },
+  "R": {
+   "bits": [
+    "########....",
+    "#########...",
+    "##.....###..",
+    "##......##..",
+    "##......##..",
+    "##.....###..",
+    "#########...",
+    "########....",
+    "##..##......",
+    "##..###.....",
+    "##...###....",
+    "##....###...",
+    "##.....###..",
+    "##......##.."
+   ],
+   "status": "direct",
+   "sources": [
+    "direct capture: ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (unknown NTSC player)"
+   ]
+  },
+  "D": {
+   "bits": [
+    "########....",
+    "#########...",
+    "..##...###..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##....##..",
+    "..##...###..",
+    "#########...",
+    "########...."
+   ],
+   "status": "direct",
+   "sources": [
+    "direct capture: ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (unknown NTSC player)"
+   ]
+  },
+  "I": {
+   "bits": [
+    "..######....",
+    "..######....",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "..######....",
+    "..######...."
+   ],
+   "status": "direct",
+   "sources": [
+    "direct capture: ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (unknown NTSC player)"
+   ]
+  },
+  "C": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "status": "direct",
+   "sources": [
+    "direct capture: ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (unknown NTSC player)"
+   ]
+  },
+  "P": {
+   "bits": [
+    "########....",
+    "#########...",
+    "##.....###..",
+    "##......##..",
+    "##......##..",
+    "##.....###..",
+    "#########...",
+    "########....",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##.........."
+   ],
+   "status": "direct",
+   "sources": [
+    "direct capture: ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (unknown NTSC player)"
+   ]
+  },
+  "Y": {
+   "bits": [
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "###....###..",
+    ".###..###...",
+    "..######....",
+    "...####.....",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......"
+   ],
+   "status": "confirmed",
+   "sources": [
+    "direct capture: ref/videos/Unknown player/Opening to Aladdin 1994 LaserDisc CAV Widescreen.mp4 (unknown NTSC player)",
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ]
+  },
+  "/": {
+   "bits": [
+    "............",
+    "............",
+    "........##..",
+    ".......###..",
+    "......###...",
+    ".....###....",
+    "....###.....",
+    "...###......",
+    "..###.......",
+    ".###........",
+    "###.........",
+    "##..........",
+    "............",
+    "............"
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 2,
+   "uncertain_dots": 0
+  },
+  "0": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 1,
+   "uncertain_dots": 0,
+   "note": "Shifted left one column (2026-11-03): the photo transcription sat on columns 1-10, every other glyph on 0-9; the shape is unchanged and symmetric."
+  },
+  "1": {
+   "bits": [
+    "............",
+    ".....##.....",
+    "....###.....",
+    "...####.....",
+    ".....##.....",
+    ".....##.....",
+    ".....##.....",
+    ".....##.....",
+    ".....##.....",
+    ".....##.....",
+    ".....##.....",
+    ".....##.....",
+    ".....##.....",
+    ".....##....."
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 1,
+   "uncertain_dots": 0
+  },
+  "3": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "........##..",
+    ".......###..",
+    "....#####...",
+    "....#####...",
+    ".......###..",
+    "........##..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 1,
+   "uncertain_dots": 0
+  },
+  "K": {
+   "bits": [
+    "............",
+    "##......##..",
+    "##.....###..",
+    "##....###...",
+    "##...###....",
+    "##..###.....",
+    "##.###......",
+    "#####.......",
+    "#####.......",
+    "##.###......",
+    "##..###.....",
+    "##...###....",
+    "##....###...",
+    "##.....###.."
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 1,
+   "uncertain_dots": 0
+  },
+  "M": {
+   "bits": [
+    "##......##..",
+    "###....###..",
+    "####..####..",
+    "##########..",
+    "##.####.##..",
+    "##..##..##..",
+    "##..##..##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##.."
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 8,
+   "uncertain_dots": 23
+  },
+  "T": {
+   "bits": [
+    "##########..",
+    "##########..",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......"
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 8,
+   "uncertain_dots": 5
+  },
+  "U": {
+   "bits": [
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 3,
+   "uncertain_dots": 14
+  },
+  "W": {
+   "bits": [
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##..##..##..",
+    "##..##..##..",
+    "##..##..##..",
+    "##..##..##..",
+    "##.####.##..",
+    "##########..",
+    "####..####..",
+    "###....###..",
+    ".#......#..."
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 1,
+   "uncertain_dots": 0
+  },
+  "Q": {
+   "bits": [
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##..##..##..",
+    "##..######..",
+    "##...####...",
+    "###..####...",
+    ".#########..",
+    "..####..##..",
+    "............"
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 1,
+   "uncertain_dots": 0
+  },
+  "B": {
+   "bits": [
+    "............",
+    "########....",
+    "#.....###...",
+    "#......##...",
+    "#.......#...",
+    "#.......#...",
+    "##.....#....",
+    "########....",
+    "#.....###...",
+    "#......##...",
+    "#.......#...",
+    "#.......#...",
+    "##.....#....",
+    "#######....."
+   ],
+   "status": "review",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 2,
+   "uncertain_dots": 52
+  },
+  "F": {
+   "bits": [
+    "............",
+    "............",
+    "##########..",
+    "##..........",
+    "##..........",
+    "##..........",
+    "###.........",
+    "###.........",
+    "########....",
+    "##..........",
+    "##..........",
+    "##..........",
+    "##..........",
+    ".#.........."
+   ],
+   "status": "review",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 8,
+   "uncertain_dots": 83
+  },
+  "H": {
+   "bits": [
+    "............",
+    "#......##..#",
+    "#......##..#",
+    "#......##..#",
+    "#......##..#",
+    "#......##..#",
+    "#......##..#",
+    "#########..#",
+    "#########..#",
+    "#......##..#",
+    "#......##..#",
+    "#......##..#",
+    "#......##..#",
+    "#......##..#"
+   ],
+   "status": "review",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 1,
+   "uncertain_dots": 0
+  },
+  "N": {
+   "bits": [
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "###.....##..",
+    "####....##..",
+    "#####...##..",
+    "##.###..##..",
+    "##..###.##..",
+    "##...#####..",
+    "##....####..",
+    "##.....###..",
+    "##......##..",
+    "##......##..",
+    "##......##.."
+   ],
+   "status": "review",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 4,
+   "uncertain_dots": 67
+  },
+  "O": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "status": "photo",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 14,
+   "uncertain_dots": 91,
+   "note": "Symmetrised at the user's request (2026-11-03: \"osd font should be symmetrical. O for example is a bit wonky\"). The review-status photo O had its top rows and row 11 one dot off. The form used is the same photo's 0, whose top equals the confirmed A and whose bottom equals U."
+  },
+  "V": {
+   "bits": [
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "###....###..",
+    ".###..###...",
+    "..######....",
+    "...####.....",
+    "....##......",
+    "............"
+   ],
+   "status": "review",
+   "sources": [
+    "photo: ref/images/Pioneer Commander CO-V100 Service Mode/Service-Menie-NTSC-Disc-0.jpg (Pioneer CO-V100)"
+   ],
+   "instances": 3,
+   "uncertain_dots": 32
+  }
+ }
+}
