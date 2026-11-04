@@ -20,6 +20,8 @@
 //                 w1  [31:0] frame count, [63:32] 64-bit words per frame
 //                 w2  [10:0] field1_row, [26:16] crop_x (TBC sample of column 0), [41:32] crop_y (frame line),
 //                     [48] stream: 0 = DSC picture, 1 = composite samples (add_cvbs.py: 2 x 313 lines of 142 words)
+//                     [49] the disc has two sides (the other side's file exists), [50] this file is side B,
+//                     [63:51] load number: changes when a disc is loaded, not on a side change or a stream switch
 //                 w3  [16:0] audio block offset in the slot, in 64-bit words (0 = no audio; tbc2dscv.c)
 //                     [48:32] VBI entry offset in the slot, words (0 = none): lines 16, 17, 329, 330 (2 words)
 //                 w4..w19   DSC PPS, byte i in word 4 + i/8, lane i%8
@@ -27,7 +29,8 @@
 //   0x30000400  status block, core -> HPS, 4 words, written at every frame boundary:
 //                 w0  [31:0] "LDS1" 0x3153444C, [63:32] frame boundaries counted
 //                 w1  [31:0] wanted frame, [35:32] player state, [36] video on, [37] disc, [38] composite wanted
-//                     (menu), [39] composite in use, [63:48] generation
+//                     (menu), [39] composite in use, [41:40] side wanted (0 any, 1 A, 2 B: the HPS changes files
+//                     when it changes), [63:48] generation
 //                 w2  [31:0] frame being decoded, [63:32] frame on screen (all ones = none)
 //                 w3  {late, errors, decode clocks / 256, decoded}, 16 bits each
 //                 w4  diagnostics: [2:0] cstate, [5:3] fstate, [10:6] bursts in flight, [16:11] header words in,
@@ -56,6 +59,8 @@ module ld_stream #(
 	input  wire  [3:0] pstate,
 	input  wire        video_on,
 	input  wire        want_cvbs,       // the menu asks for composite output (the HPS switches streams)
+	input  wire        hold,            // side change: the picture on screen stays up, through a change of disc too
+	input  wire  [1:0] want_side,       // 0 any, 1 side A, 2 side B (status w1, for the HPS)
 
 	// disc, from the header block
 	output reg         disc,            // a stream is loaded and its PPS is in the decoder
@@ -66,6 +71,9 @@ module ld_stream #(
 	output wire [10:0] pic_rows,
 	output wire        shown,           // a picture is in the frame buffer on screen
 	output reg         cvbs,            // the stream in use is the composite one: frames play from their slots
+	output reg         two_sided,       // the disc's other side is available (header w2 [49])
+	output reg         side_b,          // the stream is side B (header w2 [50])
+	output reg  [12:0] load_id,         // header w2 [63:51]
 	output reg         new_pic,         // pulse: a newly decoded picture went up, in frame buffer pic_buf
 	output reg   [1:0] pic_buf,
 	output reg         has_audio,
@@ -300,7 +308,7 @@ reg  [63:0] st_word;
 always @* begin
 	case (cw_idx)
 		3'd0: st_word = {seq, STAT_MAGIC};
-		3'd1: st_word = {cur_gen, 8'd0, cvbs, want_cvbs, disc, video_on, pstate, 16'd0, want};
+		3'd1: st_word = {cur_gen, 6'd0, want_side, cvbs, want_cvbs, disc, video_on, pstate, 16'd0, want};
 		3'd2: st_word = {disp_v ? {16'd0, disp_f} : 32'hFFFF_FFFF, fstate_busy ? {16'd0, tgt} : 32'hFFFF_FFFF};
 		3'd3: st_word = {late_count, error_count, decode_kclks, rd_count};
 		default: st_word = {busy_flips, 6'd0, loaded, fresh, cw_burst, wr_burst, lf_words_left, aud_cnt, hdr_cnt, tag_n,
@@ -439,7 +447,7 @@ always @(posedge clk) begin
 		if (cvbs) begin
 			// row 0 (field 0, line 0) is fetched during the last line of the frame before: it belongs to the frame
 			// that goes up at the coming boundary, the ready one if a fresh one is waiting
-			lf_raddr <= RING_BASE[31:3] + {buf_slot[((lf_req ? lf_row : lf_pend_row) == 10'd0 && fresh) ? ready_buf : disp_buf], 17'd0}
+			lf_raddr <= RING_BASE[31:3] + {buf_slot[((lf_req ? lf_row : lf_pend_row) == 10'd0 && fresh && !hold) ? ready_buf : disp_buf], 17'd0}
 			            + (lf_req ? lf_row : lf_pend_row) * 8'd142;
 			lf_words_left <= 10'd142;
 		end else begin
@@ -519,8 +527,8 @@ wire  [7:0] pps_byte  = hdr[4 + pps_i[6:3]][{pps_i[2:0], 3'b000} +: 8];
 reg [23:0] clocks;
 reg        dec_finished;
 
-// the frame wanted is neither on screen nor ready
-wire need = !(ready_v && ready_f == want) && !(disp_v && disp_f == want);
+// the frame wanted is neither on screen nor ready (a picture held over a side change belongs to the other side)
+wire need = !(ready_v && ready_f == want) && !(disp_v && disp_f == want && !hold);
 
 // Power-up state: nothing shown and the DDR3 port idle until the HPS writes a header.
 initial begin
@@ -529,6 +537,9 @@ initial begin
 	disc = 1'b0;
 	loaded = 1'b0;
 	cvbs = 1'b0;
+	two_sided = 1'b0;
+	side_b = 1'b0;
+	load_id = 13'd0;
 	pic_w = 16'd0;                        // no line fetch length until a PPS arrives
 	pic_h = 16'd0;
 	cur_gen = 16'd0;
@@ -599,7 +610,7 @@ always @(posedge clk) begin
 			cw_want <= 1'b1;                  // the status still goes out, so a stuck sequencer can be seen
 			busy_flips <= busy_flips + 16'd1;
 		end
-		if (fresh) begin
+		if (fresh && !hold) begin             // held for a side change: the picture on screen stays
 			new_pic <= 1'b1;
 			pic_buf <= ready_buf;
 			pic_vbi <= fb_vbi[ready_buf];
@@ -608,7 +619,7 @@ always @(posedge clk) begin
 			disp_v <= 1'b1;
 			fresh <= 1'b0;
 			if (ready_f != want) late_count <= late_count + 16'd1;
-		end else if (disc && !(disp_v && disp_f == want)) late_count <= late_count + 16'd1;
+		end else if (disc && !hold && !(disp_v && disp_f == want)) late_count <= late_count + 16'd1;
 	end
 
 	// ------------------------------------------ control: status out, header in, once per frame
@@ -634,7 +645,7 @@ always @(posedge clk) begin
 		end else if (!loaded || hdr_gen != cur_gen) begin
 			// a new disc: its PPS goes into the decoder once no frame is being decoded
 			disc <= 1'b0;
-			disp_v <= 1'b0;
+			if (!hold) disp_v <= 1'b0;        // a side change keeps the last picture up (its buffer and slot stay)
 			ready_v <= 1'b0;
 			fresh <= 1'b0;
 			if (!fstate_busy) begin
@@ -645,6 +656,9 @@ always @(posedge clk) begin
 				crop_x <= hdr[2][26:16];
 				crop_y <= hdr[2][41:32];
 				cvbs <= hdr[2][48];
+				two_sided <= hdr[2][49];
+				side_b <= hdr[2][50];
+				load_id <= hdr[2][63:51];
 				aud_off <= hdr[3][16:0];
 				has_audio <= hdr[3][16:0] != 17'd0;
 				vbi_off <= hdr[3][48:32];

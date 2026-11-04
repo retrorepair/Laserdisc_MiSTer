@@ -22,6 +22,7 @@ module osd
 );
 
 parameter  OSD_COLOR    =  3'd4;
+parameter  CVBS_SAFE    =  0;      // 1: an opaque monochrome menu that never goes below black (composite on RGB)
 
 localparam OSD_WIDTH    = 12'd256;
 localparam OSD_HEIGHT   = 12'd64;
@@ -265,6 +266,12 @@ always @(posedge clk_video) begin
 	reg hs1,hs2,hs3;
 
 	nrdout1 <= din;
+	if (CVBS_SAFE)
+		// Laserdisc core: the analogue pins carry a composite signal, where darkening the picture under the menu
+		// would reach sync level (the TV loses sync on those lines); so the menu is opaque and monochrome, the same
+		// value on every pin, dark grey (just above black, code 68) and white text
+		ordout1 <= {3{osd_pixel ? 8'd220 : 8'd76}};
+	else
 	ordout1 <= {{osd_pixel, osd_pixel, OSD_COLOR[2], din[23:19]},// 23:16
 	            {osd_pixel, osd_pixel, OSD_COLOR[1], din[15:11]},// 15:8
 	            {osd_pixel, osd_pixel, OSD_COLOR[0], din[7:3]}}; //  7:0

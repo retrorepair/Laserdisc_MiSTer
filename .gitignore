@@ -17,6 +17,7 @@
 *.HEX
 /ref/**/*.pdf
 /ref/cld1750/footage/
+/ref/d925/footage/
 /ref/mitsubishi/*_text.txt
 
 # ---- Third-party repos (re-clone at the commits in ref/PROVENANCE.md)

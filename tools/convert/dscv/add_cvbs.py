@@ -32,9 +32,6 @@ from collections import defaultdict
 
 import numpy as np
 
-W, H, LB = 1135, 313, 1136
-WHITE = 54016
-FRAME_BYTES = 2 * H * LB                  # 711136
 
 
 def main():
@@ -45,8 +42,16 @@ def main():
     ap.add_argument('--no-doc', action='store_true', help='leave dropouts as recorded')
     a = ap.parse_args()
 
-    tbc = np.memmap(a.tbc, dtype='<u2', mode='r').reshape(-1, H, W)
     db = sqlite3.connect(a.tbc + '.db')
+    # the capture's line length, field lines and levels (PAL 1135 x 313, white 54016, blanking 14442;
+    # NTSC 910 x 263, white 51200, blanking 15360); lines are padded to a multiple of 8 bytes
+    system, W, H, WHITE, BLANK = db.execute('select system, field_width, field_height, white_16b_ire, '
+                                            'blanking_16b_ire from capture').fetchone()
+    W, H, WHITE, BLANK = int(W), int(H), int(WHITE), int(BLANK)
+    LB = (W + 7) & ~7
+    FRAME_BYTES = 2 * H * LB
+    FPS = 25.0 if system == 'PAL' else 30000 / 1001
+    tbc = np.memmap(a.tbc, dtype='<u2', mode='r').reshape(-1, H, W)
     f = open(a.dscv, 'r+b')
     h = bytearray(f.read(512))
     if h[:4] != b'DSCV':
@@ -72,7 +77,7 @@ def main():
 
     lut = np.clip(np.round(np.arange(65536) * 255.0 / WHITE), 0, 255).astype(np.uint8)
     out = np.zeros((2, H, LB), np.uint8)
-    out[:, :, W] = lut[14442]             # the pad sample of each line: blanking
+    out[:, :, W:] = lut[BLANK]            # the pad samples of each line: blanking
     n_doc = 0
     for k in range(count):
         for j in range(2):
@@ -96,7 +101,7 @@ def main():
     f.seek(0)
     f.write(h)
     f.close()
-    print(f'\ncomposite region at {c_off}: {count} frames, stride {c_stride} = {c_stride * 25 / 1e6:.2f} MB/s; '
+    print(f'\ncomposite region at {c_off}: {count} frames, stride {c_stride} = {c_stride * FPS / 1e6:.2f} MB/s; '
           f'{n_doc} dropout spans compensated', file=sys.stderr)
 
 

@@ -48,7 +48,7 @@ CLD1750K/2750K OM p.20 figure, "Switching audio"; European OM p.54 (D/A/CX butto
 - Analog disc without the signals: CX off/on × stereo/L/R, six steps. **Not implemented: no CX expander yet.**
 - No TV OSD for this key is documented; the FL display's audio indicators are not modelled.
 
-### Two-side play (to implement): evidence from the same Pioneer family, CLD-2750K (CLD1750K/2750K OM)
+### Two-side play: evidence from the same Pioneer family, CLD-2750K (CLD1750K/2750K OM)
 - p.14: DISC SIDE A / SIDE B buttons. "To play side A only, press DISC SIDE A instead of ▶ … Side A will be played
   and then playback will stop". So ▶ on a two-sided disc plays side A, then turns and plays side B. In the core the
   turn streams the "…side2" file (user, 2026-11-04).
@@ -83,6 +83,37 @@ CLD1750K/2750K OM p.20 figure, "Switching audio"; European OM p.54 (D/A/CX butto
   the end of side A, the last frame stays up for the turn, then side B's first frame cuts in and plays. The turn time
   comes from the D925 measurement. The auto turn at the end of a side has not been filmed; it is taken to be the same
   mechanism and the same time.
+- **Implemented (2026-11-04):**
+  - The player's S_TURN (state 11): the picture on screen is held (ld_stream `hold`: no new picture goes up, and a
+    change of disc keeps it), with no sound or OSD, for 290 frames (11.6 s). Then side B's frame 0, decoded during
+    the turn, cuts in and plays.
+  - When: at the end of side A after PLAY; DISC SIDE B during play on side A; DISC SIDE A during play on side B.
+    DISC SIDE A from stop plays side A only, then stops (p.14). Keys: F1 DISC SIDE A, F2 DISC SIDE B.
+  - The Laserdisc Main pairs `…side1`/`…side2` files (the header's w2 bits 49-50 tell the core). On the core's
+    request (status w1 bits 40-41) it opens the other file, keeping the slot of the held picture until the turn is over.
+  - **Not implemented (no evidence yet):** a turn started from STOP (what the screen shows then), QUICK TURN,
+    Two-Side Repeat.
+
+### SEARCH / CHAPTER (planned): what the evidence gives
+- **Operation (European OM pp.58-62):**
+  - Chapter Search: digit buttons (+10 for 10 and above), then PLAY or PAUSE. "Direct search" starts on the digits;
+    "normal search" goes through CHP/TM. On CAV discs a chapter search started with PLAY gives "the beginning of the
+    designated chapter … with still frame". CLEAR corrects the entry or cancels the search.
+  - Chapter Skip: each press goes back to the start of the chapter being played, or forward one chapter; several
+    presses before the picture reappears count.
+  - Frame Number Search (CAV only): CHP/TM until "Frame 0" shows, the digits, then PLAY or PAUSE: "the designated frame is
+    played as a still frame". +10 does not work.
+  - Time Number Search (CLV): CHP/TM, the digits (min, sec), then PLAY or PAUSE. CLEAR resets the time number to "0.00".
+  - "The display" in these steps is the front-panel FL window. The TV shows the information when DISPLAY is pressed.
+- **The disc side:** the core reads CAV picture numbers (`0xF`+5 BCD digits) and chapter numbers (`0x8xxDDD`) from lines
+  17/18, which the stream carries per frame. Community North has no chapter codes, so chapter search needs another
+  test disc.
+- **Gaps (needed before the OSD part can be built without guessing):**
+  1. Footage of a CLD-1750 (or a same-family player, `M50552-132SP`) with the TV in shot during chapter, frame and time
+     entry and search: what the screen shows while digits are entered, and while the player searches.
+  2. Glyphs for the digits 2 and 4-9 (the font so far comes from F1's screens).
+  3. Search durations. F1 gives 0.77 s for `SEARCH`/`CHAPTER 1` before the first chapter; F2 (CLD-3080) a 2-3 s chapter
+     search. There is nothing yet for a frame search across the disc.
 
 ### Video sources
 - **Disc video** (TBC from DDR3) in PLAY, STILL and SCAN.
@@ -90,8 +121,18 @@ CLD1750K/2750K OM p.20 figure, "Switching audio"; European OM p.54 (D/A/CX butto
   over which the M50552 draws the background and OSD. Generated as standard PAL lines: sync 0-83, burst 98-138 at
   nominal amplitude with the PAL swing, subcarrier-locked (1135 samples/line, phase +270°/line). This models the
   player's sync generator.
-- The switch from raster to disc video restarts the line/field timing on the disc's field start at that instant
-  (not at a field boundary). That sync discontinuity is the mechanism behind the on-screen jump.
+- **Picture on (the roll):** the player's TBC output is locked to the reference H, and so is its raster, so the switch
+  from raster to disc keeps horizontal sync continuous. Only the vertical phase changes, by how far the disc's field
+  start is from the raster's. A TV's vertical oscillator misses the new field start (outside its sync window),
+  free-runs at its own slightly longer period, and rolls the picture up until it re-locks. F1 305.44-305.57 s: the
+  disc's VBI lines first appear at about 85% of the screen height, then roll up about 14% per field, locked in about
+  6 fields. tbc_timing `vjump`: at picture-on, the field-line counter jumps at the end of the line to 48, so the next
+  field start comes 266 lines (85% of a field) after the last; x runs on.
+  - Until 2026-11-04 the core restarted the whole timing (x as well) at the switch, and switched at the raster's
+    field start. That broke H (a flash, not a roll) and made almost no vertical jump. The user saw "it just kinda
+    flashes on a random part of the screen" and wanted "the real almost lost sync before lock effect".
+  - One measurement: the real offset depends on where the disc's field start falls. The line fetched across the jump
+    is the one after the old line, which is invisible during the roll.
 
 ### SYSTEM mode, two-way with the MiSTer menu
 Menu option `SYSTEM mode: PAL / NTSC / MOD.PAL`. Pressing SYSTEM on the player writes the new mode back to the menu

@@ -37,7 +37,7 @@ end
 wire [10:0] t_x; wire [8:0] t_ln; wire t_fld, t_ls;
 reg run = 0;
 always @(posedge clk) if (!reset && ce) run <= 1'b1;
-tbc_timing tim (.clk(clk), .ce(ce), .run(run), .x(t_x), .ln(t_ln), .fld(t_fld), .line_start(t_ls));
+tbc_timing tim (.clk(clk), .ce(ce), .run(run), .vjump(1'b0), .x(t_x), .ln(t_ln), .fld(t_fld), .line_start(t_ls));
 wire flip = ce && run && t_x == 0 && t_ln == 0 && !t_fld;
 
 wire disc, shown, lf_we, cvbs, cv_req; wire [9:0] lf_row;
@@ -46,7 +46,7 @@ wire [8:0] lf_addr; wire [63:0] lf_data;
 wire [15:0] frames; wire [10:0] crop_x, pic_cols, pic_rows; wire [9:0] crop_y;
 reg video_on = 1;                          // disc video wanted from the start; checks run once the picture is up
 ld_stream dut (
-	.clk(clk), .reset(reset), .want(FRAME), .flip(flip), .pstate(4'd7), .video_on(video_on), .want_cvbs(1'b1),
+	.clk(clk), .reset(reset), .want(FRAME), .flip(flip), .pstate(4'd7), .video_on(video_on), .want_cvbs(1'b1), .hold(1'b0), .want_side(2'd0), .two_sided(), .side_b(), .load_id(),
 	.cvbs(cvbs), .disc(disc), .frames(frames), .crop_x(crop_x), .crop_y(crop_y), .pic_cols(pic_cols),
 	.pic_rows(pic_rows), .shown(shown), .new_pic(), .pic_buf(), .has_audio(), .pic_vbi(), .aud_we(), .aud_waddr(),
 	.aud_wdata(), .lf_req(lf_req), .lf_row(lf_row), .lf_we(lf_we), .lf_addr(lf_addr), .lf_data(lf_data),
@@ -110,8 +110,8 @@ always @(posedge clk) if (ce && !video_on && run) begin
 end
 // first and last burst line of each raster field, and the burst phase there (rline even = 135 degrees)
 always @(posedge clk) if (ce && !video_on && run && t_x == 11'd110 && scan.rburst) begin
-	if (int'(t_ln) < bfirst[t_fld]) begin bfirst[t_fld] = t_ln; bpar_first[t_fld] = scan.rline[0]; end
-	if (int'(t_ln) > blast[t_fld])   begin blast[t_fld]  = t_ln; bpar_last[t_fld]  = scan.rline[0]; end
+	if (int'(t_ln) < bfirst[t_fld]) begin bfirst[t_fld] = t_ln; bpar_first[t_fld] = scan.rpar; end
+	if (int'(t_ln) > blast[t_fld])   begin blast[t_fld]  = t_ln; bpar_last[t_fld]  = scan.rpar; end
 end
 
 initial begin

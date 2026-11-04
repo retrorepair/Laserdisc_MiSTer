@@ -16,7 +16,7 @@ import sys
 import time
 
 KEYS = {'enter': 28, 'space': 57, 'p': 25, 's': 31, 'e': 18, 'left': 105, 'right': 106,
-        'comma': 51, 'dot': 52, 'y': 21}
+        'comma': 51, 'dot': 52, 'y': 21, 'a': 30, 'f1': 59, 'f2': 60}
 EV_SYN, EV_KEY = 0, 1
 UI_SET_EVBIT, UI_SET_KEYBIT, UI_DEV_CREATE, UI_DEV_DESTROY = 0x40045564, 0x40045565, 0x5501, 0x5502
 

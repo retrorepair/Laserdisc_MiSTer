@@ -56,6 +56,7 @@ localparam CONF_STR = {
 	"O[5:4],SYSTEM mode,PAL,NTSC,MOD.PAL;",
 	"O[6],Video output,RGB,Composite;",      // composite: the TBC samples on the VGA connector (docs/composite_output.md)
 	"O[7],Composite DAC,Green (0.7V),R+G+B tied (1.0V);",
+	"O[10:8],Chroma advance,Off,0.11us,0.23us,0.34us,0.45us,0.56us,0.68us,0.79us;",
 	"-;",
 	"T[0],Reset;",
 	"R[0],Reset and close OSD;",
@@ -70,6 +71,9 @@ wire  [2:0] osd_screen;
 wire  [1:0] osd_bg, sys_mode;
 wire  [3:0] player_state;
 wire  [1:0] audio_sel;
+wire        turn_hold, two_sided, side_b;   // two-side play
+wire [12:0] load_id;                // counts discs loaded (header)
+wire  [1:0] want_side;
 
 wire forced_scandoubler;
 wire   [1:0] buttons;
@@ -112,8 +116,8 @@ always @(posedge clk_sys) ce_cnt <= ce_cnt + 2'd1;
 wire ce_4fsc = (ce_cnt == 2'd0);
 
 ///////////////////////   TIMING   /////////////////////////////
-// ld-decode PAL TBC timing. run holds the origin for one ce on resync: the player switching from its own
-// raster to disc video restarts line/field timing at that instant (docs/player_logic.md, the picture-on jump).
+// ld-decode PAL TBC timing. On resync (picture on) the vertical phase jumps with H continuous, as the player's TBC
+// output does (tbc_timing vjump, docs/player_logic.md: the picture-on roll).
 
 wire [10:0] t_x;
 wire  [8:0] t_ln;
@@ -121,7 +125,7 @@ wire        t_fld, t_line_start;
 reg         run;
 
 always @(posedge clk_sys) begin
-	if (reset || resync) run <= 1'b0;
+	if (reset) run <= 1'b0;
 	else if (ce_4fsc) run <= 1'b1;
 end
 
@@ -130,6 +134,7 @@ tbc_timing tbc_timing
 	.clk(clk_sys),
 	.ce(ce_4fsc),
 	.run(run),
+	.vjump(resync),
 	.x(t_x),
 	.ln(t_ln),
 	.fld(t_fld),
@@ -170,7 +175,12 @@ ld_stream ld_stream
 	.pstate(player_state),
 	.video_on(video_on),
 	.want_cvbs(status[6]),
+	.hold(turn_hold),
+	.want_side(want_side),
 	.cvbs(cvbs),
+	.two_sided(two_sided),
+	.side_b(side_b),
+	.load_id(load_id),
 	.disc(disc),
 	.frames(frames),
 	.crop_x(crop_x),
@@ -240,12 +250,13 @@ assign AUDIO_R = aud_r;
 
 ///////////////////////   PLAYER LOGIC   /////////////////////////
 // Keyboard -> CLD-1750 controls (docs/player_logic.md):
-//   Enter PLAY, Space >/II, P PAUSE, S STOP, E OPEN/CLOSE, Left/Right SCAN (hold), , . STEP, Y SYSTEM, A AUDIO D/A
+//   Enter PLAY, Space >/II, P PAUSE, S STOP, E OPEN/CLOSE, Left/Right SCAN (hold), , . STEP, Y SYSTEM, A AUDIO D/A,
+//   F1 DISC SIDE A, F2 DISC SIDE B
 reg        key_tg;
-reg        k_play, k_playpause, k_pause, k_stop, k_eject, k_step_f, k_step_r, k_system, k_audio;
+reg        k_play, k_playpause, k_pause, k_stop, k_eject, k_step_f, k_step_r, k_system, k_audio, k_side_a, k_side_b;
 reg        scan_f, scan_r;
 always @(posedge clk_sys) begin
-	{k_play, k_playpause, k_pause, k_stop, k_eject, k_step_f, k_step_r, k_system, k_audio} <= 9'd0;
+	{k_play, k_playpause, k_pause, k_stop, k_eject, k_step_f, k_step_r, k_system, k_audio, k_side_a, k_side_b} <= 11'd0;
 	key_tg <= ps2_key[10];
 	if (key_tg != ps2_key[10]) begin
 		casez ({ps2_key[8], ps2_key[7:0]})
@@ -258,6 +269,8 @@ always @(posedge clk_sys) begin
 			9'h0_41: k_step_r    <= ps2_key[9];
 			9'h0_35: k_system    <= ps2_key[9];
 			9'h0_1C: k_audio     <= ps2_key[9];   // A: AUDIO D/A
+			9'h0_05: k_side_a    <= ps2_key[9];   // F1: DISC SIDE A
+			9'h0_06: k_side_b    <= ps2_key[9];   // F2: DISC SIDE B
 			9'h1_74: scan_f      <= ps2_key[9];
 			9'h1_6B: scan_r      <= ps2_key[9];
 			default: ;
@@ -282,8 +295,13 @@ player player
 	.k_audio(k_audio),
 	.scan_f(scan_f),
 	.scan_r(scan_r),
+	.k_side_a(k_side_a),
+	.k_side_b(k_side_b),
 	.disc(disc),
 	.frames(frames),
+	.two_sided(two_sided),
+	.side_b(side_b),
+	.load_id(load_id),
 	.sys_mode_in(status[5:4]),
 	.sys_mode(sys_mode),
 	.sys_mode_set(sys_mode_set),
@@ -293,6 +311,8 @@ player player
 	.osd_screen(osd_screen),
 	.osd_bg(osd_bg),
 	.state(player_state),
+	.hold(turn_hold),
+	.want_side(want_side),
 	.audio_sel(audio_sel)
 );
 
@@ -388,11 +408,118 @@ function automatic [7:0] cv_dac(input [15:0] v);
 endfunction
 reg  [7:0] cv_code1, cv_code2, cv_out;
 
+// Chroma advance (menu, Off by default), a platform bridge: the MiSTer analogue output path delays the chroma band
+// against luma, so colour trails to the right of edges on the TV (user, 2026-11-04: MiSTer's own composite output shows
+// the same on this board, which is why its author uses an external filter; the disc's TBC has chroma and luma aligned
+// within 0.1 us at the bar edges, and real players' output stages are built for composite). The composite is split into
+// chroma (a 17-tap band-pass at fsc, about +-1.4 MHz) and its exact complement (luma and sync), and the luma is delayed
+// by 2 x setting samples, so chroma reaches the TV that much earlier. Off: chroma + luma is the input, bit for bit.
+reg  [7:0] yh [0:16];                  // input history, yh[0] newest
+reg signed [10:0] ydl [0:14];          // luma history
+reg signed [9:0]  c_d;
+reg  [7:0] cv_yc;
+integer yk;
+function automatic signed [9:0] sx(input [7:0] v); sx = $signed({2'b00, v}); endfunction
+wire signed [21:0] cbp = -22'sd5   * (sx(yh[0])  + sx(yh[16])) - 22'sd6 * (sx(yh[2]) + sx(yh[14]))
+                       +  22'sd95  * (sx(yh[4])  + sx(yh[12])) - 22'sd245 * (sx(yh[6]) + sx(yh[10]))
+                       +  22'sd323 *  sx(yh[8]);
+wire signed [11:0] c_now = (cbp + 22'sd512) >>> 10;
+wire signed [11:0] y_now = sx(yh[8]) - c_now;
+wire signed [11:0] yc_sum = ydl[{status[10:8], 1'b0}] + c_d;
+always @(posedge clk_sys) if (ce_4fsc) begin
+	yh[0] <= cv_out;
+	for (yk = 1; yk < 17; yk = yk + 1) yh[yk] <= yh[yk - 1];
+	ydl[0] <= y_now[10:0];
+	for (yk = 1; yk < 15; yk = yk + 1) ydl[yk] <= ydl[yk - 1];
+	c_d <= c_now[9:0];
+	cv_yc <= (yc_sum < 0) ? 8'd0 : (yc_sum > 12'sd255) ? 8'd255 : yc_sum[7:0];
+end
+
+// Composite reconstruction, a platform bridge: the MiSTer VGA DAC is a zero-order hold at the rate the core updates
+// it, with no reconstruction filter, while the player's CCD TBC output is a band-limited analogue signal (SM VDTB,
+// docs/sm_video_audio.md). Held at 4fsc, the TBC samples carry full-strength images at 13.3 MHz and above, which a TV
+// with a sampled (comb-filter) input folds back into the picture. So the samples are interpolated 4x to clk_sys
+// (16fsc) before the DAC: a 48-tap Kaiser windowed-sinc low-pass (fc 7.4 MHz, beta 7.5), flat to 5 MHz within 0.3 dB
+// (-0.6 dB at 5.5 MHz), images 68 dB or more down. Each phase sums to 1024, so levels are unchanged
+// (docs/composite_output.md). cx[0] is the newest sample; phase p = 0..3 is the output clock within its period.
+function automatic signed [11:0] cv_cf(input [1:0] ph, input [3:0] k);
+	begin
+		case ({ph, k})
+		{2'd0, 4'd0}: cv_cf = 12'sd0;
+		{2'd0, 4'd1}: cv_cf = 12'sd1;
+		{2'd0, 4'd2}: cv_cf = -12'sd10;
+		{2'd0, 4'd3}: cv_cf = 12'sd44;
+		{2'd0, 4'd4}: cv_cf = -12'sd118;
+		{2'd0, 4'd5}: cv_cf = 12'sd258;
+		{2'd0, 4'd6}: cv_cf = 12'sd838;
+		{2'd0, 4'd7}: cv_cf = 12'sd49;
+		{2'd0, 4'd8}: cv_cf = -12'sd63;
+		{2'd0, 4'd9}: cv_cf = 12'sd34;
+		{2'd0, 4'd10}: cv_cf = -12'sd11;
+		{2'd0, 4'd11}: cv_cf = 12'sd2;
+		{2'd1, 4'd0}: cv_cf = 12'sd0;
+		{2'd1, 4'd1}: cv_cf = -12'sd2;
+		{2'd1, 4'd2}: cv_cf = -12'sd2;
+		{2'd1, 4'd3}: cv_cf = 12'sd34;
+		{2'd1, 4'd4}: cv_cf = -12'sd137;
+		{2'd1, 4'd5}: cv_cf = 12'sd500;
+		{2'd1, 4'd6}: cv_cf = 12'sd713;
+		{2'd1, 4'd7}: cv_cf = -12'sd87;
+		{2'd1, 4'd8}: cv_cf = -12'sd4;
+		{2'd1, 4'd9}: cv_cf = 12'sd15;
+		{2'd1, 4'd10}: cv_cf = -12'sd7;
+		{2'd1, 4'd11}: cv_cf = 12'sd1;
+		{2'd2, 4'd0}: cv_cf = 12'sd1;
+		{2'd2, 4'd1}: cv_cf = -12'sd7;
+		{2'd2, 4'd2}: cv_cf = 12'sd15;
+		{2'd2, 4'd3}: cv_cf = -12'sd4;
+		{2'd2, 4'd4}: cv_cf = -12'sd87;
+		{2'd2, 4'd5}: cv_cf = 12'sd713;
+		{2'd2, 4'd6}: cv_cf = 12'sd500;
+		{2'd2, 4'd7}: cv_cf = -12'sd137;
+		{2'd2, 4'd8}: cv_cf = 12'sd34;
+		{2'd2, 4'd9}: cv_cf = -12'sd2;
+		{2'd2, 4'd10}: cv_cf = -12'sd2;
+		{2'd2, 4'd11}: cv_cf = 12'sd0;
+		{2'd3, 4'd0}: cv_cf = 12'sd2;
+		{2'd3, 4'd1}: cv_cf = -12'sd11;
+		{2'd3, 4'd2}: cv_cf = 12'sd34;
+		{2'd3, 4'd3}: cv_cf = -12'sd63;
+		{2'd3, 4'd4}: cv_cf = 12'sd49;
+		{2'd3, 4'd5}: cv_cf = 12'sd838;
+		{2'd3, 4'd6}: cv_cf = 12'sd258;
+		{2'd3, 4'd7}: cv_cf = -12'sd118;
+		{2'd3, 4'd8}: cv_cf = 12'sd44;
+		{2'd3, 4'd9}: cv_cf = -12'sd10;
+		{2'd3, 4'd10}: cv_cf = 12'sd1;
+		{2'd3, 4'd11}: cv_cf = 12'sd0;
+		default: cv_cf = 12'sd0;
+		endcase
+	end
+endfunction
+reg  [7:0] cx [0:11];
+reg  [1:0] cph;
+reg signed [20:0] cprod [0:11];
+reg  [7:0] cv_hi;
+integer ck;
+always @(posedge clk_sys) begin : cv_interp
+	reg signed [24:0] acc;
+	if (ce_4fsc) begin
+		cx[0] <= cv_yc;
+		for (ck = 1; ck < 12; ck = ck + 1) cx[ck] <= cx[ck - 1];
+		cph <= 2'd0;
+	end else cph <= cph + 2'd1;
+	for (ck = 0; ck < 12; ck = ck + 1) cprod[ck] <= $signed({1'b0, cx[ck]}) * cv_cf(cph, ck[3:0]);
+	acc = 25'sd512;
+	for (ck = 0; ck < 12; ck = ck + 1) acc = acc + cprod[ck];
+	cv_hi <= (acc < 0) ? 8'd0 : (acc[24:10] > 15'd255) ? 8'd255 : acc[17:10];
+end
+
 // R+G+B tied (docs/composite_output.md): the three 0.7 V outputs in parallel into the TV's 75 ohm reach 1.05 V at
 // full scale (as voltage sources with 75 ohm each, or as current DACs with their 75 ohm terminations). Code 255
 // (white, 1.0 V above the sync tip) is then T = 729 of 765 units: T = round(code * 20 / 7), split exactly over the
 // three channels.
-wire [21:0] cv_t_p = cv_out * 14'd11703 + 22'd2048;          // code * 20/7 * 4096
+wire [21:0] cv_t_p = cv_hi * 14'd11703 + 22'd2048;           // code * 20/7 * 4096
 wire  [9:0] cv_t   = cv_t_p[21:12];
 wire [25:0] cv_t0  = cv_t * 16'd21846;                       // floor(T / 3) for T < 1000
 wire [25:0] cv_t1  = (cv_t + 10'd1) * 16'd21846;
@@ -442,10 +569,12 @@ ld_scan ld_scan
 //   active : x in [185, 1107), field line in [22, 310) (VGA_DE: what the scaler shows)
 //   RGB    : every line of the picture, VBI lines included (the frame buffer keeps field lines 12-311), as the
 //            player's video signal carries them. The scaler (HDMI) shows DE only.
-//   Composite: VGA_DE is high for every sample of every line. Platform rule (MiSTer sys_top.v, VGA_scanlines
-//            .din(de_emu ? rgb : 0)): the framework forces the analogue outputs to 0 wherever DE is low. On the
-//            composite line 0 is sync-tip level, so a normal DE would wipe the colour burst (the TV then kills the
-//            colour: a grey picture) and turn the whole blanking interval into one long sync pulse.
+//   Composite: every sample goes to the DAC. Platform rule: stock MiSTer sys_top.v zeroes the analogue outputs
+//            wherever DE is low (VGA_scanlines .din(de_emu ? rgb : 0)); on the composite line 0 is sync-tip level,
+//            so that would wipe the colour burst (the TV then kills the colour: a grey picture) and turn the blanking
+//            into one long sync pulse. The core builds with MISTER_VGA_RAW (qsf), which leaves the outputs as the
+//            core drives them. DE stays the active picture in both modes: the framework's menu (sys/osd.v) needs
+//            real line and frame blanking in DE to place itself, and the HDMI scaler shows DE only.
 //   VSync  : the broad pulses, 2.5 lines: the first field's from its line 0; the second field's from the middle of
 //            the first field's line 312 (PAL line 313), as on the disc (tbc_timing, cvbs_scan)
 
@@ -457,7 +586,8 @@ wire vsync = !p_fld ? ((p_ln < 9'd2) || (p_ln == 9'd2 && p_x < 11'd567) || (p_ln
 
 reg  [7:0] vr, vg, vb;
 reg        vhs, vvs, vde, vf1;
-always @(posedge clk_sys) if (ce_4fsc) begin
+// composite: every clk_sys (the interpolated samples); RGB: once per 4fsc sample
+always @(posedge clk_sys) if (status[6] || ce_4fsc) begin
 	if (status[6]) begin
 		// the menu's choice decides the output, so the player's raster and OSD go out as composite even with no
 		// disc; the disc's own samples take over once the Laserdisc Main has switched to the composite stream
@@ -469,7 +599,7 @@ always @(posedge clk_sys) if (ce_4fsc) begin
 			vb  <= cv_t2[23:16];
 		end else begin
 			vr  <= 8'd0;
-			vg  <= cv_out;
+			vg  <= cv_hi;
 			vb  <= 8'd0;
 		end
 	end else begin
@@ -477,9 +607,11 @@ always @(posedge clk_sys) if (ce_4fsc) begin
 		vg  <= hact ? pg : 8'd0;
 		vb  <= hact ? pb : 8'd0;
 	end
+end
+always @(posedge clk_sys) if (ce_4fsc) begin
 	vhs <= hsync;
 	vvs <= vsync;
-	vde <= status[6] ? 1'b1 : (hact && vact);   // composite: every sample passes the framework (see above)
+	vde <= hact && vact;
 	vf1 <= p_fld;
 end
 

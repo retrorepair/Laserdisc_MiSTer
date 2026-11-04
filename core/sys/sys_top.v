@@ -1385,7 +1385,13 @@ scanlines #(0) VGA_scanlines
 	.clk(clk_vid),
 
 	.scanlines(scanlines),
+`ifdef MISTER_VGA_RAW
+	// Laserdisc core: the analogue outputs carry every sample, sync and burst included (composite replay of the
+	// TBC). Zeroing outside DE would turn the blanking interval into sync level; the core blanks RGB itself.
+	.din({r_out, g_out, b_out}),
+`else
 	.din(de_emu ? {r_out, g_out, b_out} : 24'd0),
+`endif
 	.hs_in(hs_fix),
 	.vs_in(vs_fix),
 	.de_in(de_emu),
@@ -1400,7 +1406,11 @@ scanlines #(0) VGA_scanlines
 
 wire [23:0] vga_data_osd;
 wire        vga_vs_osd, vga_hs_osd, vga_de_osd;
+`ifdef MISTER_VGA_RAW
+osd #(.CVBS_SAFE(1)) vga_osd
+`else
 osd vga_osd
+`endif
 (
 	.clk_sys(clk_sys),
 

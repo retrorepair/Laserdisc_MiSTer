@@ -54,8 +54,13 @@ User decisions (2026-11-03):
 - **The framework zeroes RGB wherever DE is low** (`sys/sys_top.v`, VGA_scanlines `.din(de_emu ? {r,g,b} : 0)`).
   First CRT test (2026-11-04, user): a grey screen instead of the blue background, and the picture "looks terrible".
   The cause: with the normal DE (active picture only), the burst and the whole blanking interval became code 0, which is
-  sync-tip level. With no burst the TV kills the colour, and the blanking turned into one long sync pulse. So in
-  composite mode the core holds VGA_DE high for every sample, and the framework passes the full line through.
+  sync-tip level. With no burst the TV kills the colour, and the blanking turned into one long sync pulse.
+  - First fix: DE high for every sample. That brought the colour back, but the MiSTer menu stopped drawing: `sys/osd.v`
+    finds line starts from DE rises, and the frame start from more than 4 line-widths without one, measured against the
+    last DE pulse. No DE pattern gives it both while every composite sample passes.
+  - **Now:** the core builds with `MISTER_VGA_RAW` (qsf), a switch added to `sys_top.v` that leaves the analogue outputs
+    as the core drives them, and DE is the normal active picture again. The core blanks RGB itself. In RGB mode the VBI
+    lines therefore reach the analogue port too, as the player's video output carries them.
 - **Field structure (measured on the Community North TBC, 2026-11-04).** The stored first field (`isFirstField`)
   holds PAL lines 1-313: its 313th stored line is line 313, with an equalising pulse in the first half and the
   second field's first broad pulse in the second. The second field holds lines 314-625 in stored lines 0-311; its
@@ -67,6 +72,30 @@ User decisions (2026-11-03):
   pulses at the standard 27.3/2.35/4.7 µs (the service manual gives no widths for the sync generator). It also has
   PAL burst blanking, with the first and last burst of every field on a 135° line. The disc shows the same 4-field
   cycle: bursts from line 5 or 6, to line 307/308/309.
+- **Colour saturation on composite (measured 2026-11-04, Community North frame 1950).** The TBC's chroma equals the
+  reference decoder's (Decode-Orc Transform PAL 3D) chroma at its absolute level: the ratio is 1.00 over about 43,000
+  points. But the TBC's colour burst is 9.1-10.5 IRE peak (ld-decode `medianBurstIRE` 10.5), 0.42-0.49 of PAL's nominal
+  21.4 IRE. A TV sets its colour gain from the burst, so on composite this disc shows about 2.35x the reference
+  saturation. **User decision: leave the TBC as captured** (no burst correction). Whether the low burst is on the disc
+  or comes from the capture chain is open; another PAL capture would tell.
+- **OSD outline and the dark band beside text (user photos 2026-11-04).** The outline (1 dot left/top, 2 right/bottom)
+  switches the chroma off, as the letters do. A TV restores chroma gradually, so a desaturated dark band shows beyond
+  the outline. F1 frame osd_024 (a real CLD-1750) shows full blue up to the outline, which fits an outline that keeps
+  the background chroma at black level. That is an inference without the M50552 datasheet. **User decision: keep the
+  outline as is** until there is better evidence.
+- **Colour trailing to the right (chroma later than luma on the TV), 2026-11-04.** The disc's TBC has chroma and luma
+  aligned within 0.1 us at the colour-bar edges, and the OSD aligns them by construction. The user reports MiSTer's own
+  composite output (sys yc_out) shows the same trailing on this I/O board, which is why its author uses an external
+  filter. So it is the analogue output path.
+  - Tried first: 4x interpolation to clk_sys (a 48-tap reconstruction filter, flat to 5 MHz). It removes the DAC's
+    4fsc images, but the trailing stayed.
+  - **Menu option "Chroma advance"** (Off, 0.11-0.79 us in 0.113 us steps): the composite is split into chroma (a 17-tap
+    band-pass at fsc) and its exact complement (luma and sync), and luma is delayed so chroma arrives early. Off is bit
+    for bit the input. The burst moves with chroma, still within the back porch.
+- **Raster subcarrier (dot crawl on the blue screens, not on the disc), 2026-11-04.** The raster used exactly 283.75
+  subcarrier cycles per line. PAL is 283.75 + 1/625 (fsc = 283.75 fH + 25 Hz), the offset PAL chose to make the dot
+  pattern least visible, and the disc's line-locked TBC carries it. The raster now steps its burst phase by
+  283.75 + 1/625 cycles per line (rth, 1/5000-cycle units), so the OSD's blue (phase from the line's own burst) follows.
 - (The DAC modes are below.)
 - **MiSTer.ini for this core:** `vga_mode=rgb` (not cvbs, which would route our RGB through yc_out), `vga_scaler=0`
   and `vga_sog=0`. The user's [MiSTer] section already has these, so nothing changes.

@@ -8,6 +8,11 @@
 //   AUDIO D/A (D/A/CX): LD with analog audio carrying CX auto-switching signals cycles stereo -> L channel ->
 //   R channel (CLD1750K OM p.20 figure; European OM p.54 D/A/CX). The digital-audio cycle and the six-step CX cycle
 //   of discs without the signals are not implemented (no digital audio source, no CX expander yet).
+//   Two-side play (docs/player_logic.md): PLAY on a two-sided disc plays side A, then turns and plays side B;
+//   DISC SIDE A instead of PLAY plays side A only, then stops (CLD1750K/2750K OM p.14). The turn holds the last
+//   picture, with no sound, for 11.6 s, then side B's first frame cuts in and plays (CLD-D925 footage 26dn8tT74Io,
+//   DISC SIDE B pressed at 76.0 s, side-B picture at 87.6 s; user: "hold the last frame from side 1 until side 2
+//   comes up and then just starts playing side 2"). The auto turn at the end of a side is taken to be the same.
 module player (
 	input             clk,
 	input             reset,
@@ -25,9 +30,14 @@ module player (
 	input             k_audio,      // AUDIO D/A (D/A/CX on the remote)
 	input             scan_f,       // held
 	input             scan_r,       // held
+	input             k_side_a,     // DISC SIDE A
+	input             k_side_b,     // DISC SIDE B
 
 	input             disc,         // a TBC image is loaded
 	input      [15:0] frames,
+	input             two_sided,    // the disc's other side is available
+	input             side_b,       // the side loaded is B
+	input      [12:0] load_id,      // changes when a disc is loaded from the MiSTer menu or an MGL
 
 	input       [1:0] sys_mode_in,  // SYSTEM mode from the MiSTer menu (0 PAL, 1 NTSC, 2 MOD.PAL)
 	output reg  [1:0] sys_mode,
@@ -39,17 +49,26 @@ module player (
 	output reg  [2:0] osd_screen,   // ids: tools/osd/gen_osd_rom.py
 	output      [1:0] osd_bg,       // 1 blue, 2 black (OM p.46)
 	output reg  [3:0] state,
+	output reg        hold,         // side change: the picture on screen stays up
+	output reg  [1:0] want_side,    // during a turn: 1 A, 2 B (else 0); the HPS changes files when it changes
 	output reg  [1:0] audio_sel     // 0 stereo, 1 L channel, 2 R channel
 );
 
 localparam [15:0] T_CLOSE = 16'd188, T_SPINUP = 16'd138, T_INFO = 16'd90, T_SPINDOWN = 16'd50, T_LOWSCAN = 16'd50;
+localparam [15:0] T_TURN = 16'd290;    // 11.6 s at 25 frames/s (CLD-D925 footage, above)
 localparam S_IDLE = 4'd0, S_OPEN = 4'd1, S_CLOSING = 4'd2, S_STOP = 4'd3, S_SPINDOWN = 4'd4,
-           S_SPINUP = 4'd5, S_INFO = 4'd6, S_PLAY = 4'd7, S_PAUSE = 4'd8, S_STILL = 4'd9, S_SCAN = 4'd10;
+           S_SPINUP = 4'd5, S_INFO = 4'd6, S_PLAY = 4'd7, S_PAUSE = 4'd8, S_STILL = 4'd9, S_SCAN = 4'd10,
+           S_TURN = 4'd11;
 
 reg [15:0] t;              // frames in the current state
 reg        play_after;     // CLOSING was started by PLAY
 reg  [1:0] sys_seen;
 reg        scan_dir;       // 1 = forward
+reg        side_a_only;    // DISC SIDE A started play: stop at the end of side A
+reg [12:0] seen_id;        // the load number already acted on
+reg        reload;         // a disc was loaded while another played: open the tray, then close and play
+wire       new_load = disc && load_id != seen_id;
+wire       turn_done = disc && (side_b == (want_side == 2'd2));   // the side asked for is loaded
 
 assign osd_bg = (sys_mode == 2'd2) ? 2'd2 : 2'd1;
 
@@ -79,15 +98,33 @@ always @(posedge clk) begin
 	if (reset) begin
 		audio_sel <= 2'd0;
 		state <= S_IDLE; t <= 16'd0; video_on <= 1'b0; frame <= 16'd0; osd_screen <= 3'd0;
+		hold <= 1'b0; want_side <= 2'd0; side_a_only <= 1'b0; seen_id <= 13'd0; reload <= 1'b0;
 		sys_mode <= sys_mode_in; sys_seen <= sys_mode_in;
 	end else begin
 		if (frame_tick) t <= t + 16'd1;
 
+		// Load disc (MiSTer menu or MGL) is the disc placed in the open tray and PLAY pressed: the tray closes and
+		// play starts, with the player's own timings ("Tray closing (PLAY with tray open)", docs/player_logic.md).
+		// A disc that is playing first stops and the tray opens, as on the machine (user, 2026-11-04: "once a disc
+		// is selected in the mister menu it should play automatically", accounting for the player's behaviour).
+		if (new_load) begin
+			seen_id <= load_id;
+			case (state)
+			S_IDLE, S_STOP, S_OPEN, S_CLOSING: begin
+				play_after <= 1'b1; side_a_only <= 1'b0; video_on <= 1'b0; go(S_CLOSING);
+			end
+			S_SPINDOWN: reload <= 1'b1;
+			default: begin
+				hold <= 1'b0; want_side <= 2'd0; video_on <= 1'b0; frame <= 16'd0; reload <= 1'b1; go(S_SPINDOWN);
+			end
+			endcase
+		end else
 		case (state)
 		S_IDLE, S_STOP: begin
 			video_on <= 1'b0;
 			osd_screen <= (state == S_STOP) ? 3'd3 : 3'd0;
-			if (play_key && disc) go(S_SPINUP);
+			if (play_key && disc) begin side_a_only <= 1'b0; go(S_SPINUP); end
+			else if (k_side_a && disc && !side_b) begin side_a_only <= 1'b1; go(S_SPINUP); end   // OM p.14
 			else if (k_eject) go(S_SPINDOWN);
 		end
 		S_SPINDOWN: begin                       // disc stops before the tray opens (EST 2 s)
@@ -96,8 +133,9 @@ always @(posedge clk) begin
 		end
 		S_OPEN: begin
 			video_on <= 1'b0; osd_screen <= 3'd6;
-			if (k_eject) begin play_after <= 1'b0; go(S_CLOSING); end
-			else if (play_key) begin play_after <= 1'b1; go(S_CLOSING); end
+			if (reload) begin reload <= 1'b0; play_after <= 1'b1; side_a_only <= 1'b0; go(S_CLOSING); end
+			else if (k_eject) begin play_after <= 1'b0; go(S_CLOSING); end
+			else if (play_key) begin play_after <= 1'b1; side_a_only <= 1'b0; go(S_CLOSING); end
 		end
 		S_CLOSING: begin
 			osd_screen <= 3'd4;
@@ -122,9 +160,23 @@ always @(posedge clk) begin
 			else if (k_pause || k_playpause) begin video_on <= 1'b0; go(S_PAUSE); end
 			else if (k_step_f || k_step_r) go(S_STILL);
 			else if (scan_f || scan_r) begin scan_dir <= scan_f; go(S_SCAN); end
+			// DISC SIDE A/B during play turns to that side, the picture held (D925 footage, 76.0 s)
+			else if (k_side_b && two_sided && !side_b) begin hold <= 1'b1; want_side <= 2'd2; go(S_TURN); end
+			else if (k_side_a && two_sided && side_b) begin hold <= 1'b1; want_side <= 2'd1; go(S_TURN); end
 			else if (frame_tick) begin
-				if (frame >= last) begin video_on <= 1'b0; frame <= 16'd0; go(S_STOP); end   // end of disc
-				else frame <= frame + 16'd1;
+				if (frame >= last) begin
+					if (two_sided && !side_b && !side_a_only) begin hold <= 1'b1; want_side <= 2'd2; go(S_TURN); end
+					else begin video_on <= 1'b0; frame <= 16'd0; go(S_STOP); end   // end of disc
+				end else frame <= frame + 16'd1;
+			end
+		end
+		S_TURN: begin                           // the last picture held, no sound, no OSD; then side B plays
+			osd_screen <= 3'd0;
+			if (turn_done) frame <= 16'd0;      // decoded during the turn, so it is ready at the cut
+			// the request goes back to 0 when the turn ends, so the HPS (which acts on a change) sees the next one
+			if (k_stop) begin hold <= 1'b0; want_side <= 2'd0; video_on <= 1'b0; frame <= 16'd0; go(S_STOP); end
+			else if (frame_tick && t + 16'd1 >= T_TURN && turn_done) begin
+				hold <= 1'b0; want_side <= 2'd0; side_a_only <= 1'b0; frame <= 16'd0; go(S_PLAY);
 			end
 		end
 		S_PAUSE: begin                          // picture and sound off (OM p.50)

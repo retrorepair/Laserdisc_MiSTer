@@ -32,9 +32,18 @@ ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 ORC = os.environ.get('ORC_CLI') or os.path.join(ROOT, 'ref', 'tools', 'decode-orc', 'Decode-Orc', 'bin', 'orc-cli.exe')
 ENC = os.path.join(HERE, 'tbc2dscv.exe')
 
-X0, X1 = 152, 1112   # TBC samples kept, end exclusive (960, a multiple of 3 and of 8)
 OVERLAP = 4          # frames, see the chunk loop
-Y0, Y1 = 24, 624     # frame-flat lines kept, end exclusive (600; Y0 even = first field)
+# Geometry per system (the capture's system, from ld-decode's .tbc.db):
+#   x0, x1   TBC samples kept, end exclusive: a multiple of 3 (DSC) and of 8 wide, covering the active line
+#   y0, y1   frame-flat lines kept, end exclusive (y0 even = first field), VBI lines included
+#   src      TBC line length and frame lines; fdur frame duration in us; the Decode-Orc reference decoder
+GEOMETRY = {
+    # PAL: samples 152-1111 (960: burst end + back porch to front porch), field lines 12-311
+    'PAL':  dict(x0=152, x1=1112, y0=24, y1=624, src_w=1135, src_h=625, fdur=40000, decoder='transform3d'),
+    # NTSC: samples 130-897 (768: ld-decode's active 134-893 and 4 either side), field lines 10-261
+    # (VBI lines 16-18 included); 1001/30 ms frames; ntsc3d is Decode-Orc's adaptive 3D NTSC decoder
+    'NTSC': dict(x0=130, x1=898, y0=20, y1=524, src_w=910, src_h=525, fdur=33367, decoder='ntsc3d'),
+}
 
 
 def frame_fields(db_path, first, count):
@@ -74,6 +83,11 @@ def main():
 
     tbc = os.path.abspath(a.tbc)
     db_path = tbc + '.db'
+    system = sqlite3.connect(db_path).execute('select system from capture').fetchone()[0]
+    if system not in GEOMETRY:
+        sys.exit(f'{db_path}: system {system} is not supported')
+    g = GEOMETRY[system]
+    X0, X1, Y0, Y1 = g['x0'], g['x1'], g['y0'], g['y1']
     nfields = sqlite3.connect(db_path).execute('select count(*) from field_record').fetchone()[0]
     count = a.count if a.count else nfields // 2 - a.first
     vbi = frame_fields(db_path, a.first, count)
@@ -84,8 +98,8 @@ def main():
     with open(vbi_path, 'wb') as f:
         f.write(vbi)
     cmd = [ENC, '-o', os.path.abspath(a.out), '-n', str(count), '-w', str(w), '-h', str(h), '-bpp', str(a.bpp),
-           '-vbi', vbi_path, '-crop-x', str(X0), '-crop-y', str(Y0), '-src-w', '1135', '-src-h', '625',
-           '-fdur', '40000', '-threads', str(a.threads)]
+           '-vbi', vbi_path, '-crop-x', str(X0), '-crop-y', str(Y0), '-src-w', str(g['src_w']),
+           '-src-h', str(g['src_h']), '-fdur', str(g['fdur']), '-threads', str(a.threads)]
     if a.verify:
         cmd.append('-verify')
     if a.dump:
@@ -112,7 +126,7 @@ def main():
     last_frame = nfields // 2 - 1
     for c0 in range(a.first, a.first + count, a.chunk):
         c1 = min(c0 + a.chunk, a.first + count) - 1
-        # Transform PAL 3D looks at neighbouring fields; each chunk is decoded
+        # The 3D decoders look at neighbouring fields; each chunk is decoded
         # with OVERLAP extra frames either side (discarded) so a chunked run
         # gives the same pictures as one whole-range run.
         d0, d1 = max(0, c0 - OVERLAP), min(last_frame, c1 + OVERLAP)
@@ -120,7 +134,7 @@ def main():
         orc = [a.orc, '--source', f'tbc_source=input_path={rel_tbc}',
                '--filters', f'frame_map=ranges={d0}-{d1},video_params=activeVideoStart={X0}:activeVideoEnd={X1}'
                             f':firstActiveFrameLine={Y0}:lastActiveFrameLine={Y1}',
-               '--sink', 'video_sink=output_path=chunk.rgb:output_mode=raw:raw_format=rgb:decoder_type=transform3d']
+               '--sink', 'video_sink=output_path=chunk.rgb:output_mode=raw:raw_format=rgb:decoder_type=' + g['decoder']]
         r = subprocess.run(orc, cwd=tmp, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         if r.returncode or not os.path.exists(rgb) or os.path.getsize(rgb) != (d1 - d0 + 1) * frame_bytes:
             enc.kill()

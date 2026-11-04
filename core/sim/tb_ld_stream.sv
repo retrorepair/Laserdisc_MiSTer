@@ -75,7 +75,7 @@ wire [15:0] al, ar;
 wire [127:0] pic_vbi;
 
 ld_stream dut (
-	.clk(clk), .reset(reset), .want(want), .flip(flip), .pstate(4'd7), .video_on(1'b1), .want_cvbs(1'b0), .cvbs(),
+	.clk(clk), .reset(reset), .want(want), .flip(flip), .pstate(4'd7), .video_on(1'b1), .want_cvbs(1'b0), .hold(1'b0), .want_side(2'd0), .two_sided(), .side_b(), .load_id(), .cvbs(),
 	.disc(disc), .frames(frames), .crop_x(crop_x), .crop_y(crop_y), .pic_cols(pic_cols), .pic_rows(pic_rows),
 	.shown(shown), .new_pic(new_pic), .pic_buf(pic_buf), .has_audio(has_audio), .pic_vbi(pic_vbi),
 	.aud_we(aud_we), .aud_waddr(aud_waddr), .aud_wdata(aud_wdata), .lf_req(lf_req), .lf_row(lf_row), .lf_we(lf_we), .lf_addr(lf_addr), .lf_data(lf_data),

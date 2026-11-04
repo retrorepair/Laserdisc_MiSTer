@@ -27,13 +27,14 @@ in `docs/`, not filled with guesses.
 
 | | |
 |---|---|
-| Disc formats | PAL now. NTSC is planned. |
+| Disc formats | PAL now. NTSC playback is next (the converter already handles NTSC captures). |
 | Picture | **RGB**: decoded offline by Decode-Orc's Transform PAL 3D, the ld-decode project's reference decoder (HDMI or analogue RGB). **Composite**: the TBC samples replayed at 4fsc (17.734475 MHz), with the player's OSD mixed into the composite signal, as on the real machine. |
 | Sound | The disc's analogue FM soundtracks (ld-decode's 44.1 kHz PCM). Muted outside normal play, as the player does. Channel select (stereo, L, R) with AUDIO D/A. Squelched where the disc's programme status code says there is no programme. |
-| Transport | Tray open/close, spin-up, PLAY, PAUSE, STOP, still frame, step forward/back, scan forward/back, end of disc. Timings follow the manuals and footage. |
+| Transport | Tray open/close, spin-up, PLAY, PAUSE, STOP, still frame, step forward/back, scan forward/back, end of disc. Loading a disc closes the tray and starts play, as PLAY does with the tray open. Timings follow the manuals and footage. |
+| Two-sided discs | At the end of side A the player turns the disc: the last picture holds, with no sound, then side B cuts in and plays. DISC SIDE A/B turn on request, and DISC SIDE A from stop plays side A only. |
 | OSD | The player's character-generator screens, with the background blue (PAL/NTSC mode) or black (MOD. PAL), as the manual describes. |
 | VBI | The disc's own vertical-interval lines are played, Philips codes included. |
-| Coming next | Two-side play (auto side change to a `…side2` file), SEARCH/CHAPTER, NTSC, digital audio. |
+| Coming next | NTSC, SEARCH/CHAPTER, digital audio. |
 
 ## What you need
 
@@ -69,6 +70,9 @@ second with 8 threads, so a full CAV side of 54,000 frames takes about 6 hours.
 
 ### 2. Make the RGB stream with tbc2dscv
 
+PAL and NTSC captures both work: the converter takes the system from ld-decode's `.tbc.db` (Decode-Orc's
+Transform PAL 3D, or its `ntsc3d` decoder). The core plays PAL only for now.
+
 Install [Decode-Orc](https://github.com/simoninns/decode-orc) (tested: 2.10.1 for Windows; the MSI can be
 extracted rather than installed). `tbc2dscv.py` runs its `orc-cli` in chunks and feeds the frames to `tbc2dscv.exe`,
 the DSC encoder (prebuilt in the release; `tools/convert/dscv/build.sh` builds it with MinGW gcc).
@@ -97,11 +101,10 @@ python tools/convert/dscv/dscv_info.py MyDisc.dscv
 
 A file is about 1.3 MB per frame: about 10 GB for 5 minutes, and about 70 GB for a full CAV side.
 
-### Two-sided discs (coming)
+### Two-sided discs
 
-Name the sides so they end `side1` and `side2`, for example `Domesday North side1.dscv` and
-`Domesday North side2.dscv`. Two-side play, which changes side when side 1 finishes, will look for the matching
-`side2` file.
+Name the sides so the file names end `side1` and `side2`, for example `Domesday North side1.dscv` and
+`Domesday North side2.dscv`, in the same folder. When side 1 ends, the player turns to the matching `side2` file.
 
 ## Tutorial 2: setting up the core
 
@@ -118,8 +121,8 @@ MiSTer switches to it only when this core loads, and uses your normal Main for e
    ```
 3. **Put your disc files in `games/Laserdisc/`**, as for any other core: on the SD card
    (`/media/fat/games/Laserdisc/`), on USB, or on a network share mounted as `games`.
-4. **Load the core**, open the OSD (F12), choose **Load disc**, and pick a `.dscv` file. The tray closes and the disc
-   spins up; press PLAY (Enter).
+4. **Load the core**, open the OSD (F12), choose **Load disc**, and pick a `.dscv` file. The tray closes, the disc
+   spins up and play starts, as on the player when PLAY is pressed with the tray open.
 5. Optional: make a shortcut (`.mgl`) that loads the core and a disc in one step:
    ```xml
    <mistergamedescription>
@@ -132,6 +135,9 @@ MiSTer switches to it only when this core loads, and uses your normal Main for e
 - **SYSTEM mode** (PAL, NTSC, MOD. PAL): the player's output mode. It also sets the background colour.
 - **Video output** (RGB, Composite): Composite sends the disc's composite signal to the analogue VGA port.
 - **Composite DAC** (Green 0.7 V, R+G+B tied 1.0 V): must match your cable ([tutorial 3](#tutorial-3-making-the-composite-cable)).
+- **Chroma advance** (Off, 0.11-0.79 us): sends the colour signal early, to cancel the colour delay of the MiSTer's
+  analogue output path (colour trailing to the right of edges). Off leaves the signal untouched. Pick the setting
+  that looks best on your TV (0.34 us on the developer's).
 
 **MiSTer.ini for composite:** keep `vga_mode=rgb` (the default) and `vga_scaler=0`. The `cvbs`, `svideo` and `ypbpr`
 modes would run the framework's own colour conversion over the core's signal and wreck it.
@@ -162,8 +168,8 @@ Don't use the tied setting with a green-only cable: the signal would be a third 
 and grey.
 
 Then set **Video output: Composite**. Notes:
-- The MiSTer OSD menu is drawn by the framework in RGB on top of the signal, so it looks wrong on a composite TV.
-  The core's own player OSD is mixed into the composite signal properly.
+- The MiSTer OSD menu shows in monochrome over the composite picture. The core builds the framework so its menu
+  can't pull the signal down to sync level. The core's own player OSD is mixed into the composite signal properly.
 - HDMI shows the raw composite waveform (green, or grey) while composite is selected. Use RGB for HDMI.
 
 ## Controls
@@ -181,6 +187,7 @@ Keyboard (the player's front panel and remote):
 | , / . | STEP reverse / forward (from still) |
 | Y | SYSTEM (output mode) |
 | A | AUDIO D/A (stereo, L, R) |
+| F1 / F2 | DISC SIDE A / DISC SIDE B |
 
 ## Streaming from a network share
 
