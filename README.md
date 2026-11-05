@@ -6,6 +6,13 @@ own transport behaviour, on-screen display and sound handling. It can output **g
 disc's own time-base-corrected signal, sample for sample, through the analogue I/O board's DAC, with no RGB
 re-encoding.
 
+<p>
+<img src="docs/images/robocop_display.png" width="49%" alt="Robocop playing on the core: DISPLAY shows the time 0.35, PLAY and DIGITAL STEREO over the Orion logo">
+<img src="docs/images/robocop_title.png" width="49%" alt="Robocop's title over the city at dusk, played by the core">
+</p>
+
+*Robocop (NTSC, CLV, digital sound) on the core, captured from the HDMI output in RGB mode: DISPLAY with the disc's time and DIGITAL STEREO, and the title.*
+
 > **Status: early test build.** PAL discs play from start to end with picture, sound and the player's OSD. Expect
 > bugs. Please report what you see (with photos of the TV if you can) in the issues.
 

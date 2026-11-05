@@ -17,7 +17,8 @@ rmdir ref/cld1750 ref/docs 2>/dev/null || true
 if grep -rn -I -E '192[.]168[.]|googl[e]mail|-p[w] 1|Y:.MiST[e]r' . --exclude-dir=.git; then
 	echo "export_public: private details found (above)"; exit 1
 fi
-if find . -path ./.git -prune -o -type f \( -iname '*_ocr.txt' -o -iname '*.jpg' -o -iname '*.png' \) -print | grep .; then
+# docs/images: the README's screenshots of the core (user, 2026-11-05); no other image goes public
+if find . -path ./.git -prune -o -path ./docs/images -prune -o -type f \( -iname '*_ocr.txt' -o -iname '*.jpg' -o -iname '*.png' \) -print | grep .; then
 	echo "export_public: OCR or image files found (above)"; exit 1
 fi
 echo "export_public: $(find . -path ./.git -prune -o -type f -print | wc -l) files in $OUT"
