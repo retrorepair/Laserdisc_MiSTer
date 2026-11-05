@@ -4,7 +4,8 @@
   "confirmed": "identical in two independent players' output",
   "direct": "single direct video capture (highest-fidelity source)",
   "photo": "single photo of an LCD, clean vote (few uncertain dots), checked by eye",
-  "review": "photo instances disagree: not yet reliable; do not use"
+  "review": "photo instances disagree: not yet reliable; do not use",
+  "derived": "drawn in this font's style from another Pioneer OSD (see the glyph note)"
  },
  "note": "No source is a CLD-1750 direct capture; agreement across players supports a shared Mitsubishi font. Mask -132SP identity per glyph is unproven.",
  "glyphs": {
@@ -618,6 +619,206 @@
    ],
    "instances": 3,
    "uncertain_dots": 32
+  },
+  "2": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "........##..",
+    ".......###..",
+    "......###...",
+    ".....###....",
+    "....###.....",
+    "...###......",
+    "..###.......",
+    ".###........",
+    "##########..",
+    "##########.."
+   ],
+   "status": "derived",
+   "note": "derived 2026-11-04: shape from the CLD-D925 OSD (tour kT6GRXhZ4: 1.22/1.26/1.34/1.38, CHAPTER 7/9/29, B > A), drawn in the CLD-1750 font's 2-dot stroke style (its confirmed 0 and 3); an approximation the user accepted (\"I don't care if you have to approximate characters\")"
+  },
+  "4": {
+   "bits": [
+    "......##....",
+    ".....###....",
+    "....####....",
+    "...#####....",
+    "..###.##....",
+    ".###..##....",
+    "###...##....",
+    "##....##....",
+    "##########..",
+    "##########..",
+    "......##....",
+    "......##....",
+    "......##....",
+    "......##...."
+   ],
+   "status": "derived",
+   "note": "derived 2026-11-04: shape from the CLD-D925 OSD (tour kT6GRXhZ4: 1.22/1.26/1.34/1.38, CHAPTER 7/9/29, B > A), drawn in the CLD-1750 font's 2-dot stroke style (its confirmed 0 and 3); an approximation the user accepted (\"I don't care if you have to approximate characters\")"
+  },
+  "5": {
+   "bits": [
+    "##########..",
+    "##########..",
+    "##..........",
+    "##..........",
+    "########....",
+    "#########...",
+    ".......###..",
+    "........##..",
+    "........##..",
+    "........##..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "status": "derived",
+   "note": "derived 2026-11-04: shape from the CLD-D925 OSD (tour kT6GRXhZ4: 1.22/1.26/1.34/1.38, CHAPTER 7/9/29, B > A), drawn in the CLD-1750 font's 2-dot stroke style (its confirmed 0 and 3); an approximation the user accepted (\"I don't care if you have to approximate characters\")"
+  },
+  "6": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##..........",
+    "##..........",
+    "########....",
+    "#########...",
+    "###....###..",
+    "##......##..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "status": "derived",
+   "note": "derived 2026-11-04: shape from the CLD-D925 OSD (tour kT6GRXhZ4: 1.22/1.26/1.34/1.38, CHAPTER 7/9/29, B > A), drawn in the CLD-1750 font's 2-dot stroke style (its confirmed 0 and 3); an approximation the user accepted (\"I don't care if you have to approximate characters\")"
+  },
+  "7": {
+   "bits": [
+    "##########..",
+    "##########..",
+    "##......##..",
+    "........##..",
+    ".......###..",
+    "......###...",
+    ".....###....",
+    ".....##.....",
+    "....###.....",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......",
+    "....##......"
+   ],
+   "status": "derived",
+   "note": "derived 2026-11-04: shape from the CLD-D925 OSD (tour kT6GRXhZ4: 1.22/1.26/1.34/1.38, CHAPTER 7/9/29, B > A), drawn in the CLD-1750 font's 2-dot stroke style (its confirmed 0 and 3); an approximation the user accepted (\"I don't care if you have to approximate characters\")"
+  },
+  "8": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##......##..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "status": "derived",
+   "note": "derived 2026-11-04: shape from the CLD-D925 OSD (tour kT6GRXhZ4: 1.22/1.26/1.34/1.38, CHAPTER 7/9/29, B > A), drawn in the CLD-1750 font's 2-dot stroke style (its confirmed 0 and 3); an approximation the user accepted (\"I don't care if you have to approximate characters\")"
+  },
+  "9": {
+   "bits": [
+    "..######....",
+    ".########...",
+    "###....###..",
+    "##......##..",
+    "##......##..",
+    "###....###..",
+    ".#########..",
+    "..########..",
+    "........##..",
+    "........##..",
+    "##......##..",
+    "###....###..",
+    ".########...",
+    "..######...."
+   ],
+   "status": "derived",
+   "note": "derived 2026-11-04: shape from the CLD-D925 OSD (tour kT6GRXhZ4: 1.22/1.26/1.34/1.38, CHAPTER 7/9/29, B > A), drawn in the CLD-1750 font's 2-dot stroke style (its confirmed 0 and 3); an approximation the user accepted (\"I don't care if you have to approximate characters\")"
+  },
+  ">": {
+   "bits": [
+    "............",
+    "##..........",
+    "####........",
+    "######......",
+    "########....",
+    "##########..",
+    "############",
+    "############",
+    "##########..",
+    "########....",
+    "######......",
+    "####........",
+    "##..........",
+    "............"
+   ],
+   "status": "derived",
+   "note": "derived 2026-11-04: shape from the CLD-D925 OSD (tour kT6GRXhZ4: 1.22/1.26/1.34/1.38, CHAPTER 7/9/29, B > A), drawn in the CLD-1750 font's 2-dot stroke style (its confirmed 0 and 3); an approximation the user accepted (\"I don't care if you have to approximate characters\"); the side-change arrow (solid triangle), held at code 0x3E (\">\")"
+  },
+  "Z": {
+   "status": "derived",
+   "note": "derived 2026-11-05: drawn in the CLD-1750 font's 2-dot stroke style for the OM p.44-45 words (ZU, ZUFALL; the speed words x2, x3); no footage of these glyphs; an approximation the user accepted",
+   "bits": [
+    "##########..",
+    "##########..",
+    ".......###..",
+    "......###...",
+    ".....###....",
+    ".....##.....",
+    "....###.....",
+    "...###......",
+    "..###.......",
+    ".###........",
+    "###.........",
+    "##..........",
+    "##########..",
+    "##########.."
+   ]
+  },
+  "x": {
+   "status": "derived",
+   "note": "derived 2026-11-05: drawn in the CLD-1750 font's 2-dot stroke style for the OM p.44-45 words (ZU, ZUFALL; the speed words x2, x3); no footage of these glyphs; an approximation the user accepted",
+   "bits": [
+    "............",
+    "............",
+    "............",
+    "............",
+    "##......##..",
+    "###....###..",
+    ".###..###...",
+    "..######....",
+    "...####.....",
+    "...####.....",
+    "..######....",
+    ".###..###...",
+    "###....###..",
+    "##......##.."
+   ]
   }
  }
 }

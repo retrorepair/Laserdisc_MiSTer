@@ -69,13 +69,13 @@ wire  [8:0] lf_addr;
 wire [47:0] lf_data;
 wire        new_pic, has_audio, aud_we;
 wire  [1:0] pic_buf;
-wire [11:0] aud_waddr;
+wire [12:0] aud_waddr;
 wire [63:0] aud_wdata;
 wire [15:0] al, ar;
 wire [127:0] pic_vbi;
 
 ld_stream dut (
-	.clk(clk), .reset(reset), .want(want), .flip(flip), .pstate(4'd7), .video_on(1'b1), .want_cvbs(1'b0), .hold(1'b0), .want_side(2'd0), .two_sided(), .side_b(), .load_id(), .cvbs(),
+	.clk(clk), .reset(reset), .want(want), .flip(flip), .pstate(4'd7), .video_on(1'b1), .want_cvbs(1'b0), .hold(1'b0), .want_side(2'd0), .two_sided(), .side_b(), .load_id(), .ntsc(), .cvbs(),
 	.disc(disc), .frames(frames), .crop_x(crop_x), .crop_y(crop_y), .pic_cols(pic_cols), .pic_rows(pic_rows),
 	.shown(shown), .new_pic(new_pic), .pic_buf(pic_buf), .has_audio(has_audio), .pic_vbi(pic_vbi),
 	.aud_we(aud_we), .aud_waddr(aud_waddr), .aud_wdata(aud_wdata), .lf_req(lf_req), .lf_row(lf_row), .lf_we(lf_we), .lf_addr(lf_addr), .lf_data(lf_data),
@@ -85,7 +85,7 @@ ld_stream dut (
 
 ld_audio aud (
 	.clk(clk), .reset(reset), .aud_we(aud_we), .aud_waddr(aud_waddr), .aud_wdata(aud_wdata),
-	.new_pic(new_pic), .pic_buf(pic_buf), .sound_on(has_audio), .chan(2'd0), .l(al), .r(ar)
+	.new_pic(new_pic), .pic_buf(pic_buf), .sound_on(has_audio), .chan(2'd0), .src(1'b0), .ntsc(1'b0), .l(al), .r(ar)
 );
 
 // audio out: the sample presented at each 44.1 kHz tick while playing
@@ -173,8 +173,8 @@ initial begin
 
 	// 4. audio: the block in the bank, then every sample played at 44.1 kHz
 	for (int i = 0; i < 1024; i++)
-		if (aud.bank[{dut.disp_buf, i[9:0]}] !== mem[RING_W + AUDW + i]) begin
-			if (errors < 10) $display("audio bank word %0d: %h, want %h", i, aud.bank[{dut.disp_buf, i[9:0]}], mem[RING_W + AUDW + i]);
+		if (aud.bank[{dut.disp_buf, 1'b0, i[9:0]}] !== mem[RING_W + AUDW + i]) begin
+			if (errors < 10) $display("audio bank word %0d: %h, want %h", i, aud.bank[{dut.disp_buf, 1'b0, i[9:0]}], mem[RING_W + AUDW + i]);
 			errors++;
 		end
 	repeat (3000000) @(posedge clk);

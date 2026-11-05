@@ -21,7 +21,8 @@ time, so the spans are used as ld-decode detected them.
 Header (DSCV bytes 256-299, reserved in dscv.h):
   256 "CVB1", 260 u32 version 1, 264 u64 frames_offset, 272 u32 stride, 276 u32 frame_bytes (711136),
   280 u16 line_bytes 1136, 282 u16 lines_per_field 313, 284 u16 samples_per_line 1135, 286 u16 0,
-  288 u32 audio_off in the frame, 292 u32 white level (54016 = code 255), 296 u32 first source frame
+  288 u32 audio_off in the frame, 292 u32 white level (54016 = code 255), 296 u32 first source frame,
+  300 u32 audio2_off in the frame: the digital audio block (0 = none), right after the analogue one
 """
 import argparse
 import os
@@ -62,8 +63,11 @@ def main():
     if not aud_off:
         sys.exit('the DSC region has no audio blocks to copy')
     blk = 8 + 4 * struct.unpack_from('<I', h, 84)[0]
+    aud2_off = struct.unpack_from('<I', h, 88)[0]           # the DSC frame's digital audio block (tbc2dscv.c)
+    nblk = 2 if aud2_off else 1                              # both blocks are copied, back to back
     c_aud = FRAME_BYTES
-    c_stride = (FRAME_BYTES + blk + 511) & ~511
+    c_aud2 = FRAME_BYTES + blk if aud2_off else 0
+    c_stride = (FRAME_BYTES + nblk * blk + 511) & ~511
     dsc_end = frames_off + count * stride
     c_off = (dsc_end + 4095) & ~4095
     f.truncate(c_off)                     # replaces any earlier composite region
@@ -89,15 +93,16 @@ def main():
                     n_doc += 1
             out[j, :, :W] = lut[fld]
         f.seek(frames_off + k * stride + aud_off)
-        audio = f.read(blk)
+        audio = f.read(nblk * blk)
         f.seek(c_off + k * c_stride)
         f.write(out.tobytes())
         f.write(audio)
-        f.write(bytes(c_stride - FRAME_BYTES - blk))
+        f.write(bytes(c_stride - FRAME_BYTES - nblk * blk))
         if k % 250 == 0:
             print(f'\r  {k} / {count} frames', end='', file=sys.stderr, flush=True)
     struct.pack_into('<4sIQIIHHHHIII', h, 256, b'CVB1', 1, c_off, c_stride, FRAME_BYTES, LB, H, W, 0,
                      c_aud, WHITE, a.first)
+    struct.pack_into('<I', h, 300, c_aud2)
     f.seek(0)
     f.write(h)
     f.close()

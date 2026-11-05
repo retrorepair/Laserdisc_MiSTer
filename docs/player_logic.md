@@ -94,26 +94,39 @@ CLD1750K/2750K OM p.20 figure, "Switching audio"; European OM p.54 (D/A/CX butto
   - **Not implemented (no evidence yet):** a turn started from STOP (what the screen shows then), QUICK TURN,
     Two-Side Repeat.
 
-### SEARCH / CHAPTER (planned): what the evidence gives
-- **Operation (European OM pp.58-62):**
-  - Chapter Search: digit buttons (+10 for 10 and above), then PLAY or PAUSE. "Direct search" starts on the digits;
-    "normal search" goes through CHP/TM. On CAV discs a chapter search started with PLAY gives "the beginning of the
-    designated chapter … with still frame". CLEAR corrects the entry or cancels the search.
-  - Chapter Skip: each press goes back to the start of the chapter being played, or forward one chapter; several
-    presses before the picture reappears count.
-  - Frame Number Search (CAV only): CHP/TM until "Frame 0" shows, the digits, then PLAY or PAUSE: "the designated frame is
-    played as a still frame". +10 does not work.
-  - Time Number Search (CLV): CHP/TM, the digits (min, sec), then PLAY or PAUSE. CLEAR resets the time number to "0.00".
-  - "The display" in these steps is the front-panel FL window. The TV shows the information when DISPLAY is pressed.
-- **The disc side:** the core reads CAV picture numbers (`0xF`+5 BCD digits) and chapter numbers (`0x8xxDDD`) from lines
-  17/18, which the stream carries per frame. Community North has no chapter codes, so chapter search needs another
-  test disc.
-- **Gaps (needed before the OSD part can be built without guessing):**
-  1. Footage of a CLD-1750 (or a same-family player, `M50552-132SP`) with the TV in shot during chapter, frame and time
-     entry and search: what the screen shows while digits are entered, and while the player searches.
-  2. Glyphs for the digits 2 and 4-9 (the font so far comes from F1's screens).
-  3. Search durations. F1 gives 0.77 s for `SEARCH`/`CHAPTER 1` before the first chapter; F2 (CLD-3080) a 2-3 s chapter
-     search. There is nothing yet for a frame search across the disc.
+### SEARCH / CHAPTER: evidence and implementation (2026-11-04/05)
+- **Operation (European OM pp.58-62):** digit buttons (+10 for 10 and above), then PLAY or PAUSE ("Direct search";
+  "normal search" goes through CHP/TM). CLEAR corrects or cancels. Chapter Skip: each press goes back to the start of
+  the current chapter or forward one; presses before the picture returns accumulate. Frame Number Search (CAV only)
+  and Time Number Search (CLV) through CHP/TM. The digits show in the front-panel display; the TV shows them only with
+  DISPLAY. "Chapter Search is not possible with discs which are not divided into chapters."
+- **The TV during a search (this player family):**
+  - F1 (CLD-1750, 304.67-305.44 s): `SEARCH` / `CHAPTER  1` on rows 0-1 from column 1, on the background (no picture),
+    then the picture-on roll. The chapter number is right-aligned in two places.
+  - F2 (CLD-3080, same OSD family): `Search` / `Chapter 00` on the blue background, no picture.
+  - CLD-D925 tour (kT6GRXhZ4, 1557-1575 s): repeated chapter skips show `SEARCH` / `CHAPTER 5`, `6`, `7`, `8`, `9`,
+    one per press, top left. The D925 keeps a still picture behind the text (it has a field memory, which the
+    CLD-1750 lacks), and its time display gives the digit shapes (`4.28`, `0.25`, `1.06`, `2.24` ...).
+- **Implemented (core/rtl/player.v, osd_text.v; tb_player.sv on GGV1069's own codes: PASS):**
+  1. Digit, CLEAR and chapter-skip keys on the keyboard (the remote's DIRECT SEARCH keys).
+  2. The search itself as the player does it: jump, read the disc's VBI where it lands (chapter `0x8xxDDD`, picture
+     number `0xF`+5 BCD), jump again. A bisection over the frame index, since chapter and picture numbers rise along
+     the disc. The picture is off (background plus `SEARCH` / `CHAPTER nn`) until it lands, then picture-on as at
+     the start of play. Duration: what the jumps take, with F1's 0.77 s and F2's 2-3 s as the measured
+     references for the mechanism's time.
+  3. Digits 2 and 4-9 for the OSD font, transcribed from the D925 frames (same Pioneer OSD style, approximated where
+     the footage is soft).
+  4. Test discs: GGV1069 (CAV, 30+ chapter codes) for chapter and frame search; Robocop (CLV) for chapters on CLV.
+  5. Frame and time number search after that.
+
+- **Keys:** 0-9 (and keypad) DIRECT SEARCH digits, Backspace CLEAR, C CHP/TM, [ and ] CHAPTER SKIP back/forward,
+  D DISPLAY. The OM shows entered digits in the front-panel display only; the core has no front panel, so they are
+  not shown until the search starts (as on the TV of the real player).
+- **EST (no footage):** the frame and time search screens (`FRAME nnnnn`, `TIME M.SS`, made in the chapter screen's
+  form); the CLD-1750's own DISPLAY layout (the core uses the CLD-D925's: value at row 0 left, `A PLAY` right); a
+  chapter skip past the last chapter lands at the end of the disc.
+- **Search timing:** the bisection takes what the jumps take (a jump is a frame fetch from the share, ~2-4 frames),
+  at least 0.77 s (F1). Typically 1-2 s across a whole side, against F2's 2-3 s.
 
 ### Video sources
 - **Disc video** (TBC from DDR3) in PLAY, STILL and SCAN.
@@ -137,3 +150,39 @@ CLD1750K/2750K OM p.20 figure, "Switching audio"; European OM p.54 (D/A/CX butto
 ### SYSTEM mode, two-way with the MiSTer menu
 Menu option `SYSTEM mode: PAL / NTSC / MOD.PAL`. Pressing SYSTEM on the player writes the new mode back to the menu
 (hps_io status_set); changing it in the menu changes the player. Whichever changed last wins.
+
+### SYSTEM mode, per the OM table (2026-11-05)
+OM p.46: NTSC discs have two modes, NTSC and MOD. PAL (MOD. PAL at power-on); PAL discs play as PAL. The menu now
+offers `MOD.PAL` (default) and `NTSC`; the SYSTEM key toggles them with an NTSC disc loaded and does nothing with a PAL
+disc. Background: black in MOD. PAL (at power-on, or with an NTSC disc), blue in NTSC mode and for PAL discs.
+
+### Side change OSD (CLD-D925, user: "the d925 in terms of side switching")
+During the turn the OSD shows `A > B` (or `B > A`) at the right-hand block over the held picture (D925 tour
+kT6GRXhZ4 ~772 s: "B > A"); the arrow is a solid triangle glyph (font code 0x3E).
+
+### Closed-caption decoder box (menu option, 2026-11-05)
+A model of an external line-21 decoder (rtl/cc608.v), not a player feature: EIA-608 CC1 from field 1 line 21, the
+47 CFR 15.119 decoder rules (pop-on, roll-up, paint-on, PACs, mid-row codes, tab offsets, specials, doubled control
+codes, parity errors as a solid block), 15 rows x 32 columns of 13 field lines, white 5x7 text in black boxes (the
+user's UK deaf-institute decoder of ~1995). Approximated font (tools/cc/gen_cc_font.py, user-approved). Colours and
+italics are not drawn; 608-B extended characters post-date a 1995 decoder. Verified with tb_cc.sv on standard line 21
+waveforms; no captured disc carries captions yet (GGV1069 has none).
+
+### More of the OM, implemented 2026-11-05 (tb_player: PASS)
+| Function | Evidence | Core | EST / not done |
+|---|---|---|---|
+| DISPLAY | OM p.75 (cycles), p.44 figure "3 12.49 ... PLAY" | chapter, frame (CAV) or M.SS (CLV), state word at col 17 | the LD form of the figure (the figure is CD) |
+| Setting words | OM p.44-45 tables (EN/FR/DE/IT) | AUDIO D/A: DIGITAL / ANALOG + STEREO, 1/L, 2/R; SYSTEM: PAL / NTSC 3.58 | bottom row and 3 s: EST |
+| STILL word | OM p.44 | right block in still frame | |
+| MULTI-SPEED | OM p.68 | x3 x2 x1 1/2 1/4 1/8 1/16 1/30 1/90 from 1/4, muted, DISPLAY shows the speed | keys M/N, = / - |
+| CLV warning | OM p.68 ("CLV" about 2 s) | STEP / MULTI-SPEED on a CLV disc | position: right block (EST) |
+| Picture stop code | OM p.68, IEC 60857 10.1.4 (0x82CFFF) | stills the picture at x1 and slower, normal play included | no captured disc has stop codes |
+| REPEAT | OM p.70-72 | memory (A, PLAY returns), A-B, chapter (B), side (B twice / no chapters), program (B in programme play), CLEAR ends | the jump's picture-off: EST |
+| PROGRAM | OM p.74 (figure) | 24 chapters, entry taken after ~1 s, the programme screen, programme play, stop after the last | TOTAL time needs a TOC: not shown |
+| RANDOM PLAY | OM p.66: "LD with TOC/CD/CDV" | not available (no captured TOC) | |
+| LANGUAGE | OM p.40, p.44-45 word tables | EN/FR/DE/IT; L key; kept in the menu | LASERDISC, SEARCH, CHAPTER, FRAME, TIME, TOTAL stay English (not in the OM tables); German side word from col 16 (EST) |
+| LAST MEMORY | OM p.12, p.44 | position kept through a core reset; same disc resumes there | reset = the power switch |
+| CX noise reduction | OM (CX ON / CX OFF words), SM IC700 HA12127 | **not done** | the expander's time constants are not published (Wikipedia gives 2:1, 14 dB, knee -28 dB only); needs the HA12127/HA12044 data |
+| Digital level control | OM p.12 (0 to -25 dB, OUTPUT LEVEL) | not done | |
+| 16:9 | OM p.52 (SCART wide signalling) | not applicable to composite | |
+| HILITE / INTRO scan, PGM EDIT, DIRECT CD | CD / TOC functions | not applicable | |

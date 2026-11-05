@@ -24,7 +24,7 @@ wire [10:0] xo;
 wire  [8:0] lno;
 wire        fo;
 
-pal_decoder dut (.clk(clk), .ce(ce), .s(s), .x(x), .ln(ln), .fld(fld),
+pal_decoder dut (.clk(clk), .ce(ce), .ntsc(1'b0), .s(s), .x(x), .ln(ln), .fld(fld),
                  .r(r), .g(g), .b(b), .xo(xo), .lno(lno), .fo(fo));
 
 integer fout, idx, flush;

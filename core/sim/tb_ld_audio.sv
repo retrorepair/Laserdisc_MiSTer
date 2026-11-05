@@ -6,11 +6,11 @@ reg clk = 0;
 always #7.04842 clk = ~clk;                  // 70.9379 MHz
 localparam NF = 30, FRAME_CLK = 2837516;     // 70937900 / 25
 reg [63:0] blk [0:NF*1024-1];
-reg we = 0; reg [11:0] wa; reg [63:0] wd;
+reg we = 0; reg [12:0] wa; reg [63:0] wd;
 reg new_pic = 0; reg [1:0] pb = 0;
 wire [15:0] l, r;
-ld_audio dut (.clk(clk), .reset(1'b0), .aud_we(we), .aud_waddr(wa), .aud_wdata(wd),
-              .new_pic(new_pic), .pic_buf(pb), .sound_on(1'b1), .chan(2'd0), .l(l), .r(r));
+ld_audio dut (.clk(clk), .reset(1'b0), .dlc(5'd0), .aud_we(we), .aud_waddr(wa), .aud_wdata(wd),
+              .new_pic(new_pic), .pic_buf(pb), .sound_on(1'b1), .chan(2'd0), .src(1'b0), .ntsc(1'b0), .l(l), .r(r));
 reg [31:0] got [0:NF*1764+100];
 int n = 0, gaps = 0, errors = 0;
 reg tick_d = 0, play_d = 0, started = 0;
@@ -27,7 +27,7 @@ initial begin
 	for (int f = 0; f < NF; f++) begin
 		// the frame's block goes into bank f % 3 during the frame before, as ld_stream does
 		for (int i = 0; i < 1024; i++) begin
-			@(posedge clk) begin we <= 1; wa <= {f % 3 == 0 ? 2'd0 : f % 3 == 1 ? 2'd1 : 2'd2, i[9:0]}; wd <= blk[f * 1024 + i]; end
+			@(posedge clk) begin we <= 1; wa <= {f % 3 == 0 ? 2'd0 : f % 3 == 1 ? 2'd1 : 2'd2, 1'b0, i[9:0]}; wd <= blk[f * 1024 + i]; end
 		end
 		@(posedge clk) we <= 0;
 		repeat (FRAME_CLK - 1026) @(posedge clk);

@@ -20,9 +20,14 @@ module osd_m50552 #(
 	input       [8:0] ln,
 	input             fld,
 
-	input       [2:0] screen,       // 0 = off (screen ids: tools/osd/gen_osd_rom.py)
+	input       [2:0] screen,       // 0 = off (screen ids: tools/osd/gen_osd_rom.py; 7 = osd_text.v)
+	input       [1:0] lang,         // LANGUAGE: the screen set (gen_osd_rom.py); screen 7 is shared
+	input             txt_we,       // screen 7's cells, written by osd_text.v
+	input       [8:0] txt_addr,
+	input       [6:0] txt_data,
 	input       [1:0] bg,           // 0 = overlay, 1 = blue raster, 2 = black raster
 	input             pic_off,      // no disc picture: the background fills the screen even with no screen up
+	input             ntsc,         // 525-line timing (constants below)
 
 	input signed [26:0] br,         // current line's burst vector and flags (pal_decoder)
 	input signed [26:0] bi,
@@ -36,15 +41,27 @@ module osd_m50552 #(
 	output reg        fo
 );
 
-localparam [15:0] BLANK = 16'd14442, WHITE = 16'd54016, YB = 16'd6073;
-localparam [10:0] XS = 11'd283;
-localparam [31:0] ACC0 = 32'd6927, STEP = 32'd25979;
-localparam  [8:0] ROW0 = 9'd58;
-localparam signed [17:0] QNR = -18'sd77891, QNI = -18'sd38650, QIR = -18'sd77891, QII = 18'sd38650;
+// PAL constants (tools/osd/osd_fx.py) and their NTSC counterparts, derived the same way: the dot clock is the chip's
+// own 7.03 MHz in both, so STEP scales with 4fsc; the 288 dots are centred in the active line (NTSC 134-893); the
+// blue's luma sits on the disc's 7.5 IRE setup (black 18048, white 51200), its chroma scaled by 0.925 and referred
+// to NTSC's burst at 180 deg with no V-switch (one Q for every line), nominal burst 0.20 of white. NTSC ROW0 centres
+// the 216-line grid in the 242 active lines: an estimate, since no NTSC footage of this OSD has been found yet.
+wire [15:0] BLANK = ntsc ? 16'd15360 : 16'd14442;
+wire [15:0] BLACK = ntsc ? 16'd18048 : 16'd14442;          // the outline
+wire [15:0] WHITE = ntsc ? 16'd51200 : 16'd54016;
+wire [15:0] YB    = ntsc ? 16'd7775  : 16'd6073;
+wire [10:0] XS    = ntsc ? 11'd221   : 11'd283;
+wire [31:0] ACC0  = ntsc ? 32'd9283  : 32'd6927;
+wire [31:0] STEP  = ntsc ? 32'd32177 : 32'd25979;
+wire  [8:0] ROW0  = ntsc ? 9'd33     : 9'd58;
+wire signed [17:0] QNR = ntsc ? -18'sd81671 : -18'sd77891, QNI = ntsc ? 18'sd27499 : -18'sd38650;
+wire signed [17:0] QIR = ntsc ? -18'sd81671 : -18'sd77891, QII = ntsc ? 18'sd27499 :  18'sd38650;
+wire [8:0]  WIN_L0 = ntsc ? 9'd20 : 9'd22, WIN_L1 = ntsc ? 9'd262 : 9'd310;
+wire [10:0] WIN_X0 = ntsc ? 11'd134 : 11'd185, WIN_X1 = ntsc ? 11'd894 : 11'd1107;
 
 // ------------------------------------------------------------------ ROMs
 reg [11:0] font_rom [0:2047];
-reg  [6:0] scr_rom  [0:4095];
+reg  [6:0] scr_rom  [0:16383];
 initial begin
 	$readmemh(FONT_HEX, font_rom);
 	$readmemh(SCREEN_HEX, scr_rom);
@@ -85,8 +102,9 @@ reg        [11:0] glyph_q;
 reg         [4:0] p2_gr;                 // 5 bits: glyph rows 16-17 must not wrap to 0-1
 
 wire        [8:0] q0_cell = q0_cr * 9'd24 + q0_cc;           // explicit width (a concat self-sizes)
+always @(posedge clk) if (txt_we) scr_rom[{2'b00, 3'd7, txt_addr}] <= txt_data;
 always @(posedge clk) begin
-	code_q  <= scr_rom[{scr_l, q0_cell}];
+	code_q  <= scr_rom[{(scr_l == 3'd7) ? 2'b00 : lang, scr_l, q0_cell}];
 	glyph_q <= font_rom[{code_q, p1_gr[3:0]}];
 end
 
@@ -182,7 +200,7 @@ always @(posedge clk) if (ce) begin
 	s1   <= s_in; x1 <= x; ln1 <= ln; f1 <= fld; ph1 <= x[1:0];
 	// The background colour is the screen whenever no disc picture is shown, from power-on: "In NTSC mode or
 	// PAL mode, the colour of the background is blue"; MOD. PAL "black when the power is turned on" (OM p.46).
-	win1 <= (scr_l != 3'd0 || pic_off) && (ln >= 9'd22) && (ln < 9'd310) && (x >= 11'd185) && (x < 11'd1107);
+	win1 <= (scr_l != 3'd0 || pic_off) && (ln >= WIN_L0) && (ln < WIN_L1) && (x >= WIN_X0) && (x < WIN_X1);
 	dv1  <= (x >= XS) && (dc_now < 16'd288) && (d_line >= -10'sd2) && (d_line < 10'sd218);
 	ob1  <= obuf_q;                                       // read during the clocks since x changed
 end
@@ -197,10 +215,10 @@ always @(posedge clk) if (ce) begin
 	xo <= x1; lno <= ln1; fo <= f1;
 	if (!win1) begin s_out <= s1; cls <= 2'd0; end
 	else if (dv1 && ob1[1]) begin s_out <= WHITE; cls <= 2'd1; end
-	else if (dv1 && ob1[0]) begin s_out <= BLANK; cls <= 2'd2; end
+	else if (dv1 && ob1[0]) begin s_out <= BLACK; cls <= 2'd2; end
 	else case (bg)
 		2'd1:    begin s_out <= bgs_c; cls <= 2'd3; end
-		2'd2:    begin s_out <= BLANK; cls <= 2'd2; end
+		2'd2:    begin s_out <= BLACK; cls <= 2'd2; end
 		default: begin s_out <= s1;    cls <= 2'd0; end
 	endcase
 end

@@ -37,7 +37,7 @@ end
 wire [10:0] t_x; wire [8:0] t_ln; wire t_fld, t_ls;
 reg run = 0;
 always @(posedge clk) if (!reset && ce) run <= 1'b1;
-tbc_timing tim (.clk(clk), .ce(ce), .run(run), .vjump(1'b0), .x(t_x), .ln(t_ln), .fld(t_fld), .line_start(t_ls));
+tbc_timing tim (.clk(clk), .ce(ce), .ntsc(1'b0), .run(run), .vjump(1'b0), .x(t_x), .ln(t_ln), .fld(t_fld), .line_start(t_ls));
 wire flip = ce && run && t_x == 0 && t_ln == 0 && !t_fld;
 
 wire disc, shown, lf_we, cvbs, cv_req; wire [9:0] lf_row;
@@ -46,15 +46,15 @@ wire [8:0] lf_addr; wire [63:0] lf_data;
 wire [15:0] frames; wire [10:0] crop_x, pic_cols, pic_rows; wire [9:0] crop_y;
 reg video_on = 1;                          // disc video wanted from the start; checks run once the picture is up
 ld_stream dut (
-	.clk(clk), .reset(reset), .want(FRAME), .flip(flip), .pstate(4'd7), .video_on(video_on), .want_cvbs(1'b1), .hold(1'b0), .want_side(2'd0), .two_sided(), .side_b(), .load_id(),
+	.clk(clk), .reset(reset), .want(FRAME), .flip(flip), .pstate(4'd7), .video_on(video_on), .want_cvbs(1'b1), .hold(1'b0), .want_side(2'd0), .two_sided(), .side_b(), .load_id(), .ntsc(),
 	.cvbs(cvbs), .disc(disc), .frames(frames), .crop_x(crop_x), .crop_y(crop_y), .pic_cols(pic_cols),
-	.pic_rows(pic_rows), .shown(shown), .new_pic(), .pic_buf(), .has_audio(), .pic_vbi(), .aud_we(), .aud_waddr(),
+	.pic_rows(pic_rows), .shown(shown), .new_pic(), .pic_buf(), .has_audio(), .has_digital(), .pic_vbi(), .aud_we(), .aud_waddr(),
 	.aud_wdata(), .lf_req(lf_req), .lf_row(lf_row), .lf_we(lf_we), .lf_addr(lf_addr), .lf_data(lf_data),
 	.DDRAM_BUSY(busy), .DDRAM_BURSTCNT(bc), .DDRAM_ADDR(addr), .DDRAM_DOUT(dout), .DDRAM_DOUT_READY(dready),
 	.DDRAM_RD(rd), .DDRAM_DIN(din), .DDRAM_BE(be), .DDRAM_WE(we)
 );
 wire [7:0] code; wire [15:0] s; wire [10:0] xs; wire [8:0] lns; wire flds;
-cvbs_scan scan (
+cvbs_scan scan (.ntsc(1'b0),
 	.clk(clk), .ce(ce), .x(t_x), .ln(t_ln), .fld(t_fld), .run(run), .show(cvbs && video_on && shown),
 	.lf_req(cv_req), .lf_row(lf_row), .lf_we(lf_we), .lf_addr(lf_addr), .lf_data(lf_data),
 	.code(code), .s(s), .xs(xs), .lns(lns), .flds(flds)

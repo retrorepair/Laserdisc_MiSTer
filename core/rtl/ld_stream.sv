@@ -24,6 +24,8 @@
 //                     [63:51] load number: changes when a disc is loaded, not on a side change or a stream switch
 //                 w3  [16:0] audio block offset in the slot, in 64-bit words (0 = no audio; tbc2dscv.c)
 //                     [48:32] VBI entry offset in the slot, words (0 = none): lines 16, 17, 329, 330 (2 words)
+//                     [62] the frame carries a digital audio block too (EFM, CD audio), right after the analogue one
+//                     [63] the disc is NTSC (525 lines)
 //                 w4..w19   DSC PPS, byte i in word 4 + i/8, lane i%8
 //                 w20..w27  slot table: slot k's frame at word 20 + k/2, bits 32*(k%2) +: 32; all ones = empty
 //   0x30000400  status block, core -> HPS, 4 words, written at every frame boundary:
@@ -74,14 +76,17 @@ module ld_stream #(
 	output reg         two_sided,       // the disc's other side is available (header w2 [49])
 	output reg         side_b,          // the stream is side B (header w2 [50])
 	output reg  [12:0] load_id,         // header w2 [63:51]
+	output reg         ntsc,            // header w3 [63]: a 525-line disc
 	output reg         new_pic,         // pulse: a newly decoded picture went up, in frame buffer pic_buf
 	output reg   [1:0] pic_buf,
 	output reg         has_audio,
+	output reg         has_digital,     // header w3 [62]: each frame has a digital audio block after the analogue one
 	output reg [127:0] pic_vbi,         // VBI codes of the picture on screen: {330, 329, 17, 16}, 32 bits each
+	output wire [15:0] pic_frame,       // its frame index (FFFF: none), for the player's searches
 
 	// audio blocks (ld_audio bank RAM)
 	output reg         aud_we,
-	output reg  [11:0] aud_waddr,       // {frame buffer, word}
+	output reg  [12:0] aud_waddr,       // {frame buffer, block, word}: block 0 analogue, 1 digital
 	output reg  [63:0] aud_wdata,
 
 	// line fetch (ld_scan)
@@ -134,6 +139,7 @@ reg  [3:0] buf_slot [0:2];                         // composite: the slot each b
 reg        fresh;                                   // ready_buf holds a picture not shown yet
 reg        disp_v, ready_v;
 reg [15:0] disp_f, ready_f, tgt;                    // the frame each holds / is being decoded
+assign pic_frame = disp_v ? disp_f : 16'hFFFF;
 assign shown = disp_v;
 
 reg [15:0] rd_count, late_count, error_count, decode_kclks;
@@ -226,10 +232,10 @@ reg  [16:0] vbi_off;          // VBI entry offset in the slot, words (0 = none)
 reg         has_vbi;
 reg  [63:0] vbi_w [0:1];
 reg [127:0] fb_vbi [0:2];     // VBI codes of the frame in each frame buffer
-reg  [10:0] aud_left;         // words not yet requested
-reg  [10:0] aud_cnt;          // words returned
+reg  [11:0] aud_left;         // words not yet requested
+reg  [11:0] aud_cnt;          // words returned
 reg  [28:0] aud_raddr;
-wire  [7:0] ar_len  = aud_left > 11'd64 ? 8'd64 : aud_left[7:0];
+wire  [7:0] ar_len  = aud_left > 12'd64 ? 8'd64 : aud_left[7:0];
 wire        ar_want = aud_left != 0 && tag_n < 5'd14;
 reg  [63:0] hdr [0:27];
 
@@ -405,15 +411,15 @@ always @(posedge clk) begin
 	end
 	if (aud_start || vbi_start) begin
 		aud_raddr <= RING_BASE[31:3] + {cur_slot, 17'd0} + (vbi_start ? vbi_off : aud_off);
-		aud_left <= vbi_start ? 11'd2 : 11'd1024;
-		aud_cnt <= 11'd0;
+		aud_left <= vbi_start ? 12'd2 : has_digital ? 12'd2048 : 12'd1024;   // both blocks when there are two
+		aud_cnt <= 12'd0;
 		aux_vbi <= vbi_start;
 	end
 	aud_we <= ret_aud && !aux_vbi;
-	aud_waddr <= {back_buf, aud_cnt[9:0]};
+	aud_waddr <= {back_buf, aud_cnt[10:0]};
 	aud_wdata <= DDRAM_DOUT;
 	if (ret_aud && aux_vbi) vbi_w[aud_cnt[0]] <= DDRAM_DOUT;
-	if (ret_aud) aud_cnt <= aud_cnt + 11'd1;
+	if (ret_aud) aud_cnt <= aud_cnt + 12'd1;
 
 	if (issue_rd || issue_lf || issue_cr || issue_ar) begin
 		tag_len[tag_wr] <= issue_lf ? lf_len : issue_cr ? {2'b00, HDR_WORDS} : issue_ar ? ar_len : rd_len;
@@ -448,8 +454,8 @@ always @(posedge clk) begin
 			// row 0 (field 0, line 0) is fetched during the last line of the frame before: it belongs to the frame
 			// that goes up at the coming boundary, the ready one if a fresh one is waiting
 			lf_raddr <= RING_BASE[31:3] + {buf_slot[((lf_req ? lf_row : lf_pend_row) == 10'd0 && fresh && !hold) ? ready_buf : disp_buf], 17'd0}
-			            + (lf_req ? lf_row : lf_pend_row) * 8'd142;
-			lf_words_left <= 10'd142;
+			            + (lf_req ? lf_row : lf_pend_row) * (ntsc ? 8'd114 : 8'd142);   // a line: 1136 B (PAL), 912 B (NTSC)
+			lf_words_left <= ntsc ? 10'd114 : 10'd142;
 		end else begin
 			lf_raddr <= fb_word(disp_buf) + (lf_req ? lf_row : lf_pend_row) * stride_b[13:3];
 			lf_words_left <= {1'b0, line_words[8:0]};
@@ -540,6 +546,7 @@ initial begin
 	two_sided = 1'b0;
 	side_b = 1'b0;
 	load_id = 13'd0;
+	ntsc = 1'b0;
 	pic_w = 16'd0;                        // no line fetch length until a PPS arrives
 	pic_h = 16'd0;
 	cur_gen = 16'd0;
@@ -576,14 +583,15 @@ initial begin
 	pk_hold_v = 1'b0;
 	pps_we = 1'b0;
 	poll = 16'd0;
-	aud_left = 11'd0;
-	aud_cnt = 11'd0;
+	aud_left = 12'd0;
+	aud_cnt = 12'd0;
 	aud_start = 1'b0;
 	vbi_start = 1'b0;
 	aux_vbi = 1'b0;
 	has_vbi = 1'b0;
 	pic_vbi = 128'd0;
 	has_audio = 1'b0;
+	has_digital = 1'b0;
 	new_pic = 1'b0;
 end
 
@@ -659,8 +667,10 @@ always @(posedge clk) begin
 				two_sided <= hdr[2][49];
 				side_b <= hdr[2][50];
 				load_id <= hdr[2][63:51];
+				ntsc <= hdr[3][63];
 				aud_off <= hdr[3][16:0];
 				has_audio <= hdr[3][16:0] != 17'd0;
+				has_digital <= hdr[3][16:0] != 17'd0 && hdr[3][62];
 				vbi_off <= hdr[3][48:32];
 				has_vbi <= hdr[3][48:32] != 17'd0;
 				pic_vbi <= 128'd0;
@@ -730,13 +740,13 @@ always @(posedge clk) begin
 	end
 
 	F_AUD:                                // the frame's audio block into its bank
-		if (!aud_start && aud_cnt == 11'd1024) begin
+		if (!aud_start && aud_cnt == (has_digital ? 12'd2048 : 12'd1024)) begin
 			if (has_vbi) begin vbi_start <= 1'b1; fstate <= F_VBI; end
 			else fstate <= F_DONE;
 		end
 
 	F_VBI:                                // the frame's VBI entry (two words)
-		if (!vbi_start && aud_cnt == 11'd2) begin
+		if (!vbi_start && aud_cnt == 12'd2) begin
 			fb_vbi[back_buf] <= {vbi_w[1], vbi_w[0]};
 			fstate <= F_DONE;
 		end

@@ -19,6 +19,7 @@ module ld_scan (
 	input       [1:0] cls,
 
 	input             show,         // disc video on and a picture in the frame buffer
+	input             ntsc,         // 525-line timing (tbc_timing)
 	input      [10:0] crop_x,
 	input       [9:0] crop_y,
 	input      [10:0] pic_cols,
@@ -55,7 +56,7 @@ always @(posedge clk) begin
 end
 
 // ------------------------------------------------------------------ fetch the next line at each line start
-wire       last_ln = ln == (fld ? 9'd311 : 9'd312);   // tbc_timing
+wire       last_ln = ln == (ntsc ? (fld ? 9'd261 : 9'd262) : (fld ? 9'd311 : 9'd312));   // tbc_timing
 wire [8:0] nln     = last_ln ? 9'd0 : ln + 9'd1;
 wire       nfld    = last_ln ? ~fld : fld;
 wire [10:0] nrow   = {1'b0, nln - y0, 1'b0} + nfld;

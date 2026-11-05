@@ -20,6 +20,7 @@ module cvbs_scan (
 	input             fld,
 	input             run,
 	input             show,
+	input             ntsc,         // 525-line disc: 910 x 263/262, NTSC levels and raster
 
 	output reg        lf_req,
 	output reg  [9:0] lf_row,
@@ -45,19 +46,20 @@ always @(posedge clk) begin
 	lb_q <= lb[{rd_bank, x[10:3]}];
 end
 
-wire       last_ln = ln == (fld ? 9'd311 : 9'd312);   // tbc_timing
+wire       last_ln = ln == (ntsc ? (fld ? 9'd261 : 9'd262) : (fld ? 9'd311 : 9'd312));   // tbc_timing
+wire [10:0] xlast  = ntsc ? 11'd909 : 11'd1134;      // last sample of a line
 wire [8:0] nln     = last_ln ? 9'd0 : ln + 9'd1;
 wire       nfld    = last_ln ? ~fld : fld;
 always @(posedge clk) begin
 	lf_req <= 1'b0;
 	// the bank changes on the last sample of a line, so the read for sample 0 already uses the new line's half
-	if (ce && x == 11'd1134) begin
+	if (ce && x == xlast) begin
 		rd_bank <= ~rd_bank;               // the next line: the half filled during this one
 		bank_w <= rd_bank;                 // the line after it: the other half
 	end
 	if (ce && x == 11'd0) begin
 		lf_req <= 1'b1;
-		lf_row <= (nfld ? 10'd313 : 10'd0) + {1'b0, nln};
+		lf_row <= (nfld ? (ntsc ? 10'd263 : 10'd313) : 10'd0) + {1'b0, nln};
 	end
 end
 
@@ -337,22 +339,55 @@ function automatic signed [14:0] rcos(input [7:0] i);
 		endcase
 	end
 endfunction
-reg signed [14:0] rc, rs;  // A cos(phi), A sin(phi) for the current line
-always @(posedge clk) if (ce && x == 11'd10) begin rc <= rcos(ridx); rs <= rcos(ridx - 8'd64); end
+// A cos(phi), A sin(phi) for the current line, latched once per line. NTSC: burst +-20 IRE (40 IRE p-p) = 7168 on
+// the NTSC TBC scale (358.4 per IRE) against PAL's 8481: x 27695 / 32768, applied here, off the per-sample path.
+// Pipelined over the line's first samples (rth changes at the end of the line before): the table index at x = 4,
+// the table at x = 6, the NTSC scaling at x = 10 (one long path otherwise: phase add, index, table, multiply).
+reg signed [14:0] rc, rs;
+reg         [7:0] ridx_r;
+reg signed [14:0] rc0, rs0;
+wire signed [29:0] rc0n = rc0 * 15'sd27695, rs0n = rs0 * 15'sd27695;
+always @(posedge clk) if (ce) begin
+	if (x == 11'd4) ridx_r <= ridx;
+	if (x == 11'd6) begin rc0 <= rcos(ridx_r); rs0 <= rcos(ridx_r - 8'd64); end
+	if (x == 11'd10) begin
+		rc <= ntsc ? rc0n[29:15] : rc0;
+		rs <= ntsc ? rs0n[29:15] : rs0;
+	end
+end
 wire signed [16:0] rbv = (x[1:0] == 2'd0) ? rc : (x[1:0] == 2'd1) ? -rs : (x[1:0] == 2'd2) ? -rc : rs;
-wire signed [17:0] rbs = 18'sd14442 + rbv;            // blanking + burst
+wire signed [17:0] rbs = (ntsc ? 18'sd15360 : 18'sd14442) + rbv;   // blanking + burst
 // Vertical interval, line by line as on the disc's own TBC (measured on Community North, both field types) and in
 // the 625-line standard: B = broad pulse (27.3 us = 484 samples), E = equalising pulse (2.35 us = 42), N = line
 // sync (4.7 us = 83); half lines start at x = 0 and x = 567. (The service manual gives no pulse widths for the
 // player's sync generator, so the widths are the standard's.)
 //   first field  (313 lines, PAL 1-313):   0-1 BB, 2 BE, 3-4 EE, 310-311 EE, 312 EB
 //   second field (312 lines, PAL 314-625): 0-1 BB, 2-3 EE, 4 E-, 309 NE, 310-311 EE
+// NTSC (measured on the GGV1069 TBC, both field types, and the 525-line standard): B 27.1 us = 388 samples,
+// E 2.3 us = 33, N 4.7 us = 67; half lines at x = 0 and 455:
+//   first field  (263 lines): 0-2 EE, 3-5 BB, 6-8 EE, 262 NE
+//   second field (262 lines): 0-1 EE, 2 EB, 3-4 BB, 5 BE, 6-7 EE, 8 E-
 localparam [1:0] P_NONE = 2'd0, P_N = 2'd1, P_E = 2'd2, P_B = 2'd3;
-wire        h2 = (x >= 11'd567);
-wire [10:0] xh = h2 ? x - 11'd567 : x;
+wire [10:0] xhalf = ntsc ? 11'd455 : 11'd567;
+wire        h2 = (x >= xhalf);
+wire [10:0] xh = h2 ? x - xhalf : x;
 reg   [1:0] ptype;
 always @* begin
-	if (!fld) case (ln)
+	if (ntsc) begin
+		if (!fld) case (ln)
+			9'd0, 9'd1, 9'd2, 9'd6, 9'd7, 9'd8: ptype = P_E;
+			9'd3, 9'd4, 9'd5:                   ptype = P_B;
+			9'd262:                             ptype = h2 ? P_E : P_N;
+			default:                            ptype = h2 ? P_NONE : P_N;
+		endcase else case (ln)
+			9'd0, 9'd1, 9'd6, 9'd7:             ptype = P_E;
+			9'd2:                               ptype = h2 ? P_B : P_E;
+			9'd3, 9'd4:                         ptype = P_B;
+			9'd5:                               ptype = h2 ? P_E : P_B;
+			9'd8:                               ptype = h2 ? P_NONE : P_E;
+			default:                            ptype = h2 ? P_NONE : P_N;
+		endcase
+	end else if (!fld) case (ln)
 		9'd0, 9'd1:                   ptype = P_B;
 		9'd2:                         ptype = h2 ? P_E : P_B;
 		9'd3, 9'd4, 9'd310, 9'd311:   ptype = P_E;
@@ -366,39 +401,44 @@ always @* begin
 		default:                      ptype = h2 ? P_NONE : P_N;
 	endcase
 end
-wire rlow = (ptype == P_N && xh < 11'd83) || (ptype == P_E && xh < 11'd42) || (ptype == P_B && xh < 11'd484);
+wire rlow = ntsc ? ((ptype == P_N && xh < 11'd67) || (ptype == P_E && xh < 11'd33) || (ptype == P_B && xh < 11'd388))
+                 : ((ptype == P_N && xh < 11'd83) || (ptype == P_E && xh < 11'd42) || (ptype == P_B && xh < 11'd484));
 // Burst on lines 5-309 (first field) or 5-308 (second), the first and last burst of each field on a 135-degree
 // line (rpar 0): the PAL burst-blanking sequence. The disc shows the same 4-field cycle (bursts from line 5 or 6,
 // to 307/308/309, the first and last at 135 degrees in every field).
 wire [8:0] blast = fld ? 9'd308 : 9'd309;
-wire rburst = (ptype == P_N) && (x >= 11'd98) && (x < 11'd138) &&
-              (ln >= 9'd6 || (ln == 9'd5 && !rpar)) && (ln < blast || (ln == blast && !rpar));
-wire [15:0] raster = rlow ? 16'd0 : rburst ? rbs[15:0] : 16'd14442;
-wire [13:0] rth_n = {1'b0, rth} + 14'd3758;
-always @(posedge clk) if (ce && run && x == 11'd1134) begin
+// NTSC: burst at samples 74-109 (ld-decode colourBurst 74-110, 9 cycles) on every normal line (none in the 9-line
+// vertical interval), no burst-blanking sequence; sync tip -40 IRE = 1024, blanking 15360.
+wire rburst = ntsc ? ((ptype == P_N) && !h2 && (x >= 11'd74) && (x < 11'd110))
+                   : ((ptype == P_N) && (x >= 11'd98) && (x < 11'd138) &&
+                      (ln >= 9'd6 || (ln == 9'd5 && !rpar)) && (ln < blast || (ln == blast && !rpar)));
+wire [15:0] raster = rlow ? (ntsc ? 16'd1024 : 16'd0) : rburst ? rbs[15:0] : (ntsc ? 16'd15360 : 16'd14442);
+// NTSC: 227.5 subcarrier cycles per line (fsc = 455/2 fH exactly), so the burst phase steps half a cycle (2500)
+wire [13:0] rth_n = {1'b0, rth} + (ntsc ? 14'd2500 : 14'd3758);
+always @(posedge clk) if (ce && run && x == xlast) begin
 	rth  <= (rth_n >= 14'd5000) ? rth_n - 14'd5000 : rth_n;
 	rpar <= ~rpar;
 end
 
-// DAC code of a TBC-scale level: round(v * 255 / 54016)
-function automatic [7:0] dac(input [15:0] v);
+// DAC code of a TBC-scale level: round(v * 255 / white), white 54016 (PAL) or 51200 (NTSC)
+function automatic [7:0] dac(input [15:0] v, input n);
 	reg [27:0] p;
 	begin
-		p = v * 12'd1238 + 28'd131072;
+		p = (n ? v * 12'd1306 : v * 12'd1238) + 28'd131072;   // two constant multiplies, then the select
 		dac = p[27:18] > 10'd255 ? 8'd255 : p[25:18];
 	end
 endfunction
 
 // lb_q holds the word for the current x (read in the clocks after x changed)
 wire  [7:0] smp = lb_q[{x[2:0], 3'b000} +: 8];
-wire [21:0] smp_s = smp * 22'd13557;     // code * 54016 / 255 = code * 13557 / 64
+wire [21:0] smp_s = ntsc ? smp * 22'd12850 : smp * 22'd13557;   // code * white / 255: 13557/64 (PAL), 12850/64 (NTSC)
 always @(posedge clk) if (ce) begin
 	xs <= x; lns <= ln; flds <= fld;
 	if (show) begin
 		code <= smp;
 		s    <= smp_s[21:6];
 	end else begin
-		code <= dac(raster);
+		code <= dac(raster, ntsc);
 		s    <= raster;
 	end
 end

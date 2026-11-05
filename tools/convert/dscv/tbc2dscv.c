@@ -23,6 +23,9 @@
  *   76 u32 audio_rate     44100
  *   80 u16 channels (2), 82 u16 bits (16)
  *   84 u32 audio_max      most samples a block holds (2046: the block is 1024 64-bit words)
+ *   88 u32 audio2_offset  the frame's digital audio block (0 = none): the disc's EFM digital audio (CD audio,
+ *                         44.1 kHz 16-bit stereo, decoded bit-exact by Decode-Orc's EFM decoder sink), right after
+ *                         the analogue block, in the same format
  * Block: u32 sample count, u32 0, then the samples, interleaved little-endian int16 L, R (ld-decode .pcm order).
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -145,14 +148,16 @@ static void usage(void)
 	        "  -threads N    encoder threads (default 8)\n"
 	        "  -verify       decode every frame again and report PSNR\n"
 	        "  -dump K PFX   write frame K before (PFX_src.ppm) and after (PFX_dsc.ppm) coding\n"
-	        "  -pcm FILE OFF COUNTS  audio: ld-decode .pcm from byte OFF, samples per frame in COUNTS (u32 each)\n");
+	        "  -pcm FILE OFF COUNTS  audio: ld-decode .pcm from byte OFF, samples per frame in COUNTS (u32 each)\n"
+	        "  -pcm2 FILE OFF COUNTS digital audio: 16-bit stereo PCM, the same way (needs -pcm)\n");
 	exit(2);
 }
 
 int main(int argc, char **argv)
 {
 	const char *out_path = NULL, *vbi_path = NULL, *dump_pfx = NULL, *pcm_path = NULL, *counts_path = NULL;
-	long long pcm_off = 0;
+	const char *pcm2_path = NULL, *counts2_path = NULL;
+	long long pcm_off = 0, pcm2_off = 0;
 	long frames = 0, dump_k = -1;
 	int w = 0, h = 0, crop_x = 0, crop_y = 0, src_w = 1135, src_h = 625, fdur = 40000, threads = 8, verify = 0;
 	double bpp = 8.0;
@@ -176,9 +181,13 @@ int main(int argc, char **argv)
 		else if (!strcmp(a, "-pcm") && i + 3 < argc) {
 			pcm_path = argv[++i]; pcm_off = atoll(argv[++i]); counts_path = argv[++i];
 		}
+		else if (!strcmp(a, "-pcm2") && i + 3 < argc) {
+			pcm2_path = argv[++i]; pcm2_off = atoll(argv[++i]); counts2_path = argv[++i];
+		}
 		else usage();
 	}
 	if (!out_path || frames <= 0 || w <= 0 || h <= 0 || threads < 1) usage();
+	if (pcm2_path && !pcm_path) die("-pcm2 needs -pcm%s", "");
 	if (h % 2 || crop_y % 2) die("height and crop_y must be even (whole frames, first field on even rows)%s", "");
 	if (w % 3) die("width must be a multiple of 3 (DSC groups; slice_width == pic_width)%s", "");
 #ifdef _WIN32
@@ -192,9 +201,11 @@ int main(int argc, char **argv)
 	size_t frame_bytes = dsc_picture_bytes(&p);
 	size_t audio_off = pcm_path ? (frame_bytes + 7) & ~(size_t)7 : 0;
 	size_t audio_block = 8 + 4 * AUDIO_MAX;
-	uint32_t stride = (uint32_t)(((pcm_path ? audio_off + audio_block : frame_bytes) + 511) & ~(size_t)511);
-	uint32_t *counts = NULL;
-	FILE *pcm = NULL;
+	size_t audio2_off = pcm2_path ? audio_off + audio_block : 0;
+	size_t audio_end = pcm2_path ? audio2_off + audio_block : pcm_path ? audio_off + audio_block : frame_bytes;
+	uint32_t stride = (uint32_t)((audio_end + 511) & ~(size_t)511);
+	uint32_t *counts = NULL, *counts2 = NULL;
+	FILE *pcm = NULL, *pcm2 = NULL;
 	if (pcm_path) {
 		FILE *cf = fopen(counts_path, "rb");
 		if (!cf) die("cannot open %s", counts_path);
@@ -205,6 +216,17 @@ int main(int argc, char **argv)
 			if (counts[i] > AUDIO_MAX) die("a frame has more samples than an audio block holds%s", "");
 		pcm = fopen(pcm_path, "rb");
 		if (!pcm || fseek64(pcm, pcm_off, SEEK_SET)) die("cannot open %s at its offset", pcm_path);
+	}
+	if (pcm2_path) {
+		FILE *cf = fopen(counts2_path, "rb");
+		if (!cf) die("cannot open %s", counts2_path);
+		counts2 = malloc(sizeof(uint32_t) * (size_t)frames);
+		if (fread(counts2, 4, (size_t)frames, cf) != (size_t)frames) die("%s is shorter than 4 bytes per frame", counts2_path);
+		fclose(cf);
+		for (long i = 0; i < frames; i++)
+			if (counts2[i] > AUDIO_MAX) die("a frame has more digital samples than an audio block holds%s", "");
+		pcm2 = fopen(pcm2_path, "rb");
+		if (!pcm2 || fseek64(pcm2, pcm2_off, SEEK_SET)) die("cannot open %s at its offset", pcm2_path);
 	}
 	uint64_t frames_off = (DSCV_HEADER_SIZE + (uint64_t)frames * DSCV_VBI_ENTRY + 4095) & ~(uint64_t)4095;
 
@@ -233,6 +255,7 @@ int main(int argc, char **argv)
 		wr32(head + 76, 44100);
 		head[80] = 2; head[81] = 0; head[82] = 16; head[83] = 0;
 		wr32(head + 84, AUDIO_MAX);
+		wr32(head + 88, (uint32_t)audio2_off);
 	}
 	if (vbi_path) {
 		FILE *vf = fopen(vbi_path, "rb");
@@ -290,6 +313,13 @@ int main(int argc, char **argv)
 				uint8_t *blk = J->out + audio_off;
 				wr32(blk, counts[k]);
 				if (fread(blk + 8, 4, counts[k], pcm) != counts[k]) die("%s ended early", pcm_path);
+			}
+			if (pcm2) {
+				uint8_t *blk = J->out + audio2_off;
+				wr32(blk, counts2[k]);
+				// the digital stream can end before the last frame (the decoder drains its delay lines): silence
+				size_t got = fread(blk + 8, 4, counts2[k], pcm2);
+				if (got < counts2[k]) memset(blk + 8 + 4 * got, 0, 4 * (counts2[k] - got));
 			}
 			if (fwrite(J->out, 1, stride, of) != stride) die("write failed: %s", strerror(errno));
 			if (J->fail) failures++;

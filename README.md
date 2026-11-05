@@ -126,18 +126,23 @@ MiSTer switches to it only when this core loads, and uses your normal Main for e
 5. Optional: make a shortcut (`.mgl`) that loads the core and a disc in one step:
    ```xml
    <mistergamedescription>
-       <rbf>_Custom Cores/Laserdisc_20261104</rbf>
+       <rbf>_Custom Cores/Laserdisc</rbf>
        <file delay="2" type="s" index="0" path="/media/fat/games/Laserdisc/MyDisc.dscv"/>
    </mistergamedescription>
    ```
 
 **Core menu:**
-- **SYSTEM mode** (PAL, NTSC, MOD. PAL): the player's output mode. It also sets the background colour.
+- **SYSTEM mode** (MOD.PAL, NTSC): the output for NTSC discs, as on the player. MOD.PAL (the power-on mode) codes the
+  colour as PAL on the 60 Hz picture, so a PAL TV shows NTSC discs in colour without rainbowing; NTSC sends the disc's
+  NTSC signal as it is (for NTSC TVs). PAL discs always play as PAL. It also sets the background colour.
 - **Video output** (RGB, Composite): Composite sends the disc's composite signal to the analogue VGA port.
 - **Composite DAC** (Green 0.7 V, R+G+B tied 1.0 V): must match your cable ([tutorial 3](#tutorial-3-making-the-composite-cable)).
 - **Chroma advance** (Off, 0.11-0.79 us): sends the colour signal early, to cancel the colour delay of the MiSTer's
   analogue output path (colour trailing to the right of edges). Off leaves the signal untouched. Pick the setting
   that looks best on your TV (0.34 us on the developer's).
+- **CC decoder box** (Off, On): a closed-caption decoder, as a separate box between player and TV would be: NTSC
+  line 21 captions in white text on black boxes.
+- **OSD language** (English, Francais, Deutsch, Italiano): the player's on-screen language (also the L key).
 
 **MiSTer.ini for composite:** keep `vga_mode=rgb` (the default) and `vga_scaler=0`. The `cvbs`, `svideo` and `ypbpr`
 modes would run the framework's own colour conversion over the core's signal and wreck it.
@@ -185,9 +190,20 @@ Keyboard (the player's front panel and remote):
 | E | OPEN/CLOSE |
 | Left / Right (hold) | SCAN reverse / forward |
 | , / . | STEP reverse / forward (from still) |
-| Y | SYSTEM (output mode) |
-| A | AUDIO D/A (stereo, L, R) |
+| Y | SYSTEM (output mode, NTSC discs) |
+| A | AUDIO D/A (digital / analogue, stereo, L, R) |
 | F1 / F2 | DISC SIDE A / DISC SIDE B |
+| 0-9 (and keypad) | DIRECT SEARCH digits: chapter, then Enter (play) or P (pause) |
+| C | CHP/TM: switch the entry to frame number (CAV) or time M.SS (CLV) |
+| Backspace | CLEAR (entry, search, repeat, programme) |
+| [ / ] | CHAPTER SKIP back / forward |
+| D | DISPLAY (chapter, frame or time) |
+| M / N | MULTI-SPEED forward / reverse (CAV) |
+| = / - (keypad + / -) | MULTI-SPEED faster / slower (x3 to 1/90) |
+| R / T | REPEAT A / REPEAT B (memory, A-B, chapter, side, programme repeat) |
+| G | PGM (programme up to 24 chapters; digits, then Enter) |
+| L | LANGUAGE |
+| Page Up / Page Down | digital audio LEVEL (0 to -25 dB) |
 
 ## Streaming from a network share
 

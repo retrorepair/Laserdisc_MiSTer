@@ -9,6 +9,7 @@
 module pal_decoder (
 	input             clk,
 	input             ce,
+	input             ntsc,         // NTSC line: burst window 78-109 (burst 74-110), blanking 15360
 	input      [15:0] s,
 	input      [10:0] x,
 	input       [8:0] ln,
@@ -28,10 +29,10 @@ module pal_decoder (
 	output               line_inv
 );
 
-localparam [15:0] BLANK  = 16'd14442;
+wire [15:0] BLANK  = ntsc ? 16'd15360 : 16'd14442;
 localparam [58:0] N_DIV  = 59'h4d46d3d29df4380;   // round(K_UV * 2^48)
 localparam [50:0] KILL2  = 51'd294554922506;       // colour-killer |B|^2 threshold
-localparam [10:0] BURST0 = 11'd102, BURST1 = 11'd133;
+wire [10:0] BURST0 = ntsc ? 11'd78 : 11'd102, BURST1 = ntsc ? 11'd109 : 11'd133;
 
 // ---------------------------------------------------------------- stage A: d = s - BLANK
 reg signed [17:0] d_a;
